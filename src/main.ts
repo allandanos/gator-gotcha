@@ -17,12 +17,14 @@ import { dailyDateOf, dailySeed, encodeLog } from './sim/replay';
 import { computeScore } from './sim/scoring';
 import type { World } from './sim/types';
 import { createWorld, step } from './sim/world';
+import { pickBootSeed } from './ui/bootSeed';
 import { $, formatTime, isTypingTarget } from './ui/dom';
 import { Hud } from './ui/hud';
 import { setupInstall } from './ui/install';
 import { OnlineUi } from './ui/onlineUi';
 import { fillGameOver, showScreen } from './ui/screens';
-import { loadBest, loadMuted, saveBest, saveMuted } from './ui/storage';
+import { loadBest, loadMuted, loadSeed, saveBest, saveMuted, saveSeed } from './ui/storage';
+import { setupUpdates } from './ui/updates';
 
 type Phase = 'title' | 'playing' | 'paused' | 'caught' | 'over';
 
@@ -53,7 +55,8 @@ function boot(): void {
   const recorder = new InputRecorder();
 
   const params = new URL(window.location.href).searchParams;
-  let seed = parseSeed(params.get('seed')) ?? randomSeed();
+  let seed = pickBootSeed(parseSeed(params.get('seed')), loadSeed(), dailySeed(new Date())) ?? randomSeed();
+  saveSeed(seed);
   // A shared-score link pins its seed; the challenge banner applies only while playing that seed.
   const challengeSeed = params.get('challenge') ? seed : null;
   let world: World = createWorld(seed);
@@ -62,6 +65,17 @@ function boot(): void {
   let caughtTimer = 0;
   let clock = 0;
   let best = loadBest();
+
+  const boardOpen = () => !$('#screen-board').hidden;
+  // Reload into a new build only where no run can be lost; the title screen is the safe spot.
+  const updates = setupUpdates({
+    canApplyNow: () => phase === 'title' && !boardOpen(),
+    canApplyWhileHidden: () => phase === 'title' || phase === 'over',
+  });
+  const closeBoard = () => {
+    online.closeBoard();
+    updates.maybeApply();
+  };
 
   renderer.setMap(world.map);
   $('#title-seed').textContent = seed;
@@ -85,6 +99,7 @@ function boot(): void {
   const startRun = (nextSeed: string) => {
     audio.unlock();
     seed = nextSeed;
+    saveSeed(seed);
     world = createWorld(seed);
     prev = world;
     renderer.setMap(world.map);
@@ -170,13 +185,15 @@ function boot(): void {
   $('#daily-btn').addEventListener('click', () => startRun(dailySeed(new Date())));
   $('#title-board-btn').addEventListener('click', () => void online.openBoard('title'));
   $('#over-board-btn').addEventListener('click', () => void online.openBoard('over'));
-  $('#board-back-btn').addEventListener('click', () => online.closeBoard());
+  $('#board-back-btn').addEventListener('click', closeBoard);
   $('#resume-btn').addEventListener('click', resume);
   $('#quit-btn').addEventListener('click', () => {
     phase = 'title';
     hud.show(false);
     $('#title-best').textContent = String(best);
+    $('#title-seed').textContent = seed;
     showScreen('title');
+    updates.maybeApply();
   });
   $('#retry-btn').addEventListener('click', () => startRun(seed));
   $('#new-btn').addEventListener('click', () => startRun(randomSeed()));
@@ -194,11 +211,10 @@ function boot(): void {
   });
 
   // Global keys.
-  const boardOpen = () => !$('#screen-board').hidden;
   window.addEventListener('keydown', (e) => {
     if (e.repeat || isTypingTarget(e.target)) return;
     if (e.code === 'Escape' && boardOpen()) {
-      online.closeBoard();
+      closeBoard();
     } else if (e.code === 'Escape' || e.code === 'KeyP') {
       if (phase === 'playing') pause();
       else if (phase === 'paused') resume();
@@ -223,6 +239,7 @@ function boot(): void {
 
   renderer.resize();
   setupInstall();
+
   void online.flushPending();
   showScreen('title');
   createLoop(update, render).start();

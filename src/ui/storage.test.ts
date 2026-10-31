@@ -1,0 +1,74 @@
+import { hasStoredSession, loadNickname, loadSeed, saveNickname, saveSeed } from './storage';
+
+function memoryStorage(initial: Record<string, string> = {}): Storage {
+  const data = new Map(Object.entries(initial));
+  return {
+    get length() {
+      return data.size;
+    },
+    key: (i) => [...data.keys()][i] ?? null,
+    getItem: (k) => data.get(k) ?? null,
+    setItem: (k, v) => void data.set(k, v),
+    removeItem: (k) => void data.delete(k),
+    clear: () => data.clear(),
+  };
+}
+
+const throwing = {
+  get localStorage(): Storage {
+    throw new Error('SecurityError');
+  },
+};
+
+afterEach(() => vi.unstubAllGlobals());
+
+describe('nickname cache', () => {
+  it('round-trips a valid nickname', () => {
+    vi.stubGlobal('window', { localStorage: memoryStorage() });
+    saveNickname('Duck Quacker');
+    expect(loadNickname()).toBe('Duck Quacker');
+  });
+
+  it('ignores invalid names on write and on read', () => {
+    vi.stubGlobal('window', { localStorage: memoryStorage({ 'gator-gotcha:nickname': '<script>' }) });
+    expect(loadNickname()).toBeNull();
+    saveNickname('x');
+    expect(loadNickname()).toBeNull();
+  });
+});
+
+describe('seed memory', () => {
+  it('round-trips a seed, normalised', () => {
+    vi.stubGlobal('window', { localStorage: memoryStorage() });
+    saveSeed('ABC123');
+    expect(loadSeed()).toBe('abc123');
+  });
+
+  it('returns null for a corrupt stored seed', () => {
+    vi.stubGlobal('window', { localStorage: memoryStorage({ 'gator-gotcha:seed': '../etc' }) });
+    expect(loadSeed()).toBeNull();
+  });
+});
+
+describe('hasStoredSession', () => {
+  it('detects a persisted supabase session', () => {
+    vi.stubGlobal('window', { localStorage: memoryStorage({ 'sb-ecjoimtngyohebssnxrw-auth-token': '{}' }) });
+    expect(hasStoredSession()).toBe(true);
+  });
+
+  it('is false without one', () => {
+    vi.stubGlobal('window', { localStorage: memoryStorage({ 'gator-gotcha:best': '10' }) });
+    expect(hasStoredSession()).toBe(false);
+  });
+});
+
+describe('unavailable storage', () => {
+  it('never throws', () => {
+    vi.stubGlobal('window', throwing);
+    expect(() => saveSeed('abc123')).not.toThrow();
+    expect(() => saveNickname('Duck1234')).not.toThrow();
+    expect(loadSeed()).toBeNull();
+    expect(loadNickname()).toBeNull();
+    expect(hasStoredSession()).toBe(false);
+  });
+});

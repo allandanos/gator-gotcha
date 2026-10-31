@@ -7,9 +7,10 @@ export default defineConfig({
   base: '/',
   plugins: [
     VitePWA({
-      registerType: 'autoUpdate',
-      // External registerSW.js keeps the CSP free of inline scripts.
-      injectRegister: 'script',
+      // 'prompt' keeps a downloaded update waiting until src/ui/updates.ts finds a moment that
+      // can't interrupt a run. Registration lives in our own bundle, so no inline script.
+      registerType: 'prompt',
+      injectRegister: false,
       includeAssets: ['icons/apple-touch-icon.png', 'privacy.html'],
       manifest: {
         name: 'Gator Gotcha',
@@ -42,7 +43,7 @@ export default defineConfig({
     environment: 'node',
     coverage: {
       provider: 'v8',
-      include: ['src/core/**', 'src/sim/**', 'src/ui/pendingRuns.ts', 'api/_lib/**'],
+      include: ['src/core/**', 'src/sim/**', 'src/ui/pendingRuns.ts', 'src/ui/bootSeed.ts', 'src/ui/storage.ts', 'api/_lib/**'],
       exclude: ['src/core/loop.ts', '**/*.test.ts', '**/__fixtures__/**', 'api/_lib/repository.ts'],
       thresholds: { lines: 80, functions: 80, branches: 75, statements: 80 },
     },

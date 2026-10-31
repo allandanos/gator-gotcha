@@ -1,4 +1,5 @@
 import { currentUserId, ensureSession, supabase } from './client';
+import { NICKNAME_PATTERN } from '../core/nickname';
 
 export type Board = 'all' | 'daily';
 
@@ -105,7 +106,7 @@ export async function getMyNickname(): Promise<string | null> {
   return (data?.nickname as string | undefined) ?? null;
 }
 
-export const NICKNAME_PATTERN = /^[A-Za-z0-9_ ]{3,16}$/;
+export { NICKNAME_PATTERN };
 
 export async function setNickname(nickname: string): Promise<void> {
   const trimmed = nickname.trim();

@@ -2,6 +2,7 @@ import { SIM_DT } from '../config';
 import { $, formatTime } from './dom';
 import { browserStore, createPendingRuns, flushDecision, type PendingRun, type SubmitStatus } from './pendingRuns';
 import type { ScreenId } from './screens';
+import { hasStoredSession, loadNickname, saveNickname } from './storage';
 
 type OnlineModule = typeof import('../online');
 type Board = 'all' | 'daily';
@@ -36,6 +37,8 @@ export class OnlineUi {
   private flushing = false;
   private readonly pending = createPendingRuns(browserStore());
   private readonly pendingNote = $('#pending-note');
+  private readonly titlePlayer = $('#title-player');
+  private readonly titlePlayerName = $('#title-player-name');
 
   private readonly status = $('#over-status');
   private readonly panel = $('#over-online');
@@ -67,6 +70,8 @@ export class OnlineUi {
     this.tabDaily.addEventListener('click', () => void this.renderBoard('daily'));
     window.addEventListener('online', () => void this.flushPending());
     this.refreshPendingNote();
+    this.showPlayer(loadNickname());
+    void this.syncNickname();
   }
 
   get enabled(): boolean {
@@ -96,6 +101,7 @@ export class OnlineUi {
     this.shareBtn.disabled = true;
     this.shareBtn.hidden = false;
     this.nickError.textContent = '';
+    this.prefillNickname();
     if (!navigator.onLine) {
       this.queue(run);
       return;
@@ -170,8 +176,38 @@ export class OnlineUi {
   private async showNickname(online: OnlineModule): Promise<void> {
     const name = await online.getMyNickname();
     if (!name) return;
+    this.rememberNickname(name);
+    this.prefillNickname();
+  }
+
+  /** Show the cached name on the game-over card, so it's there for offline and queued runs too. */
+  private prefillNickname(): void {
+    const name = loadNickname();
+    if (!name || document.activeElement === this.nickInput) return;
     this.nickInput.value = name;
     this.nickForm.hidden = false;
+  }
+
+  /** Refresh the cached name from the server, for returning players only (never creates an account). */
+  private async syncNickname(): Promise<void> {
+    if (!navigator.onLine || !hasStoredSession()) return;
+    try {
+      const online = await this.load();
+      const name = await online.getMyNickname();
+      if (name) this.rememberNickname(name);
+    } catch (err) {
+      console.warn('Could not refresh nickname', err);
+    }
+  }
+
+  private rememberNickname(name: string): void {
+    saveNickname(name);
+    this.showPlayer(name);
+  }
+
+  private showPlayer(name: string | null): void {
+    this.titlePlayerName.textContent = name ?? '';
+    this.titlePlayer.hidden = !name;
   }
 
   private async saveNickname(): Promise<void> {
@@ -179,6 +215,7 @@ export class OnlineUi {
     try {
       const online = await this.load();
       await online.setNickname(this.nickInput.value);
+      this.rememberNickname(this.nickInput.value.trim());
       this.nickError.textContent = 'Saved!';
     } catch (err) {
       this.nickError.textContent = errorText(err);

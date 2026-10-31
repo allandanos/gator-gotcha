@@ -852,3 +852,12 @@ code {
     transition-duration: 1ms !important;
   }
 }
+
+/* ---------- PWA update notice ---------- */
+.update-note {
+  color: var(--water);
+  font-weight: 800;
+}
+.update-note[hidden] {
+  display: none;
+}
