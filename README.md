@@ -1,5 +1,7 @@
 # Gator Gotcha
 
+**Play:** https://gator-gotcha.vercel.app
+
 Top-down swamp chase. You're a duck grabbing eggs; a sight-hunting alligator is after you.
 Break its line of sight behind logs and reeds, and dash (limited stamina) when spotted.
 One catch ends the run.
@@ -15,6 +17,14 @@ npm run lint
 ```
 
 `?seed=abc123` in the URL replays a specific swamp layout (1–12 lowercase letters/digits).
+
+## Deploy
+
+Hosted on Vercel (static Vite build; config and security headers in `vercel.json`).
+
+```bash
+vercel deploy --prod
+```
 
 ## Controls
 
