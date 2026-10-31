@@ -29,7 +29,7 @@
   --radius-card: 28px;
   --radius-btn: 16px;
 
-  --gutter: max(16px, env(safe-area-inset-left));
+  --gutter: max(16px, env(safe-area-inset-left), env(safe-area-inset-right));
   --duration-fast: 120ms;
   --duration-normal: 260ms;
   --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -61,6 +61,8 @@ body {
 .game {
   position: fixed;
   inset: 0;
+  height: 100vh;
+  height: 100dvh;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
@@ -264,7 +266,9 @@ body {
   z-index: 2;
   display: grid;
   place-items: center;
-  padding: 16px;
+  /* "safe" keeps a card taller than the viewport scrollable instead of clipping its top. */
+  align-items: safe center;
+  padding: max(16px, env(safe-area-inset-top)) var(--gutter) max(16px, env(safe-area-inset-bottom));
   background: radial-gradient(ellipse at center, rgba(36, 51, 28, 0.15), rgba(36, 51, 28, 0.55));
   backdrop-filter: blur(3px);
   overflow-y: auto;
@@ -511,6 +515,9 @@ code {
 .online-status[data-tone='ok'] {
   color: var(--gator-deep);
 }
+.online-status[data-tone='queued'] {
+  color: var(--water);
+}
 .online-status[data-tone='error'] {
   color: var(--coral);
 }
@@ -740,6 +747,100 @@ code {
   }
   .status {
     font-size: 0.9rem;
+  }
+}
+
+/* ---------- Phone landscape: short and wide, so cards go two-column ---------- */
+@media (orientation: landscape) and (max-height: 520px) {
+  :root {
+    --text-logo: clamp(2.4rem, 1.4rem + 4vw, 3.6rem);
+    --text-heading: 2rem;
+  }
+  .card {
+    padding: 16px 20px;
+    border-radius: 22px;
+  }
+  .card--title,
+  .card--over {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: center;
+    width: min(100%, 780px);
+  }
+  .logo {
+    margin-bottom: 8px;
+  }
+  .lede {
+    margin-bottom: 0;
+    font-size: var(--text-sm);
+  }
+  .controls {
+    margin-bottom: 14px;
+  }
+  .has-touch .controls li:not(.touch-only) {
+    display: none;
+  }
+  .meta {
+    margin-top: 10px;
+  }
+  .heading {
+    margin-bottom: 10px;
+  }
+  .big-score {
+    margin-bottom: 10px;
+    font-size: 2.6rem;
+  }
+  .over-stats {
+    margin-bottom: 0;
+  }
+  .over-stats dd {
+    font-size: 1.25rem;
+  }
+  .btn {
+    min-height: 44px;
+    padding: 0 18px;
+    font-size: 1.1rem;
+  }
+  .board {
+    max-height: 52dvh;
+  }
+  .online {
+    margin-bottom: 10px;
+    padding: 8px 10px 10px;
+  }
+  .online-status {
+    margin-bottom: 6px;
+    font-size: var(--text-sm);
+  }
+  .btn--small {
+    min-height: 36px;
+    font-size: 0.95rem;
+  }
+  .card--over .actions {
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+  .card--over .actions:not(.actions--tight) .btn {
+    padding: 0 12px;
+    font-size: 1rem;
+    white-space: nowrap;
+  }
+  .chip {
+    padding: 2px 10px 3px;
+  }
+  .chip dd {
+    font-size: 1.1rem;
+  }
+  .sprint-btn {
+    width: 76px;
+    height: 76px;
+    bottom: max(16px, env(safe-area-inset-bottom));
+  }
+}
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 520px) {
+  .controls li:not(.touch-only) {
+    display: none;
   }
 }
 

@@ -1,3 +1,6 @@
+import '@fontsource/lilita-one/latin-400.css';
+import '@fontsource/nunito/latin-600.css';
+import '@fontsource/nunito/latin-800.css';
 import './styles.css';
 import { AudioEngine } from './audio/audio';
 import { Music } from './audio/music';
@@ -16,6 +19,7 @@ import type { World } from './sim/types';
 import { createWorld, step } from './sim/world';
 import { $, formatTime, isTypingTarget } from './ui/dom';
 import { Hud } from './ui/hud';
+import { setupInstall } from './ui/install';
 import { OnlineUi } from './ui/onlineUi';
 import { fillGameOver, showScreen } from './ui/screens';
 import { loadBest, loadMuted, saveBest, saveMuted } from './ui/storage';
@@ -208,6 +212,7 @@ function boot(): void {
     if (document.hidden) pause();
   });
   window.addEventListener('resize', () => renderer.resize());
+  window.visualViewport?.addEventListener('resize', () => renderer.resize());
 
   if (import.meta.env.DEV) {
     // Dev-only hook for browser-driven testing; stripped from production builds.
@@ -217,6 +222,8 @@ function boot(): void {
   }
 
   renderer.resize();
+  setupInstall();
+  void online.flushPending();
   showScreen('title');
   createLoop(update, render).start();
 }

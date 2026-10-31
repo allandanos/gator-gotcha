@@ -1,5 +1,6 @@
 import { SIM_DT } from '../config';
 import { $, formatTime } from './dom';
+import { browserStore, createPendingRuns, flushDecision, type PendingRun, type SubmitStatus } from './pendingRuns';
 import type { ScreenId } from './screens';
 
 type OnlineModule = typeof import('../online');
@@ -7,10 +8,20 @@ type Board = 'all' | 'daily';
 
 const ONLINE_CONFIGURED = Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** Stays under the server's 10 submissions/minute rate limit. */
+const FLUSH_BATCH = 8;
 
 function errorText(err: unknown): string {
   return err instanceof Error ? err.message : 'Something went wrong';
 }
+
+/** HTTP status of a failed submit; anything without one (offline, chunk failed to load) is a network failure. */
+function statusOf(err: unknown): SubmitStatus {
+  const status = (err as { status?: unknown } | null)?.status;
+  return typeof status === 'number' ? status : 'network';
+}
+
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 /**
  * Leaderboard, score submission, nickname and sharing UI. The supabase-backed module is
@@ -22,6 +33,9 @@ export class OnlineUi {
   private tab: Board = 'all';
   private backTo: ScreenId = 'title';
   private submitToken = 0;
+  private flushing = false;
+  private readonly pending = createPendingRuns(browserStore());
+  private readonly pendingNote = $('#pending-note');
 
   private readonly status = $('#over-status');
   private readonly panel = $('#over-online');
@@ -51,6 +65,8 @@ export class OnlineUi {
     });
     this.tabAll.addEventListener('click', () => void this.renderBoard('all'));
     this.tabDaily.addEventListener('click', () => void this.renderBoard('daily'));
+    window.addEventListener('online', () => void this.flushPending());
+    this.refreshPendingNote();
   }
 
   get enabled(): boolean {
@@ -70,14 +86,20 @@ export class OnlineUi {
     return this.mod;
   }
 
-  /** Submit a finished run and show the verified rank. */
+  /** Submit a finished run and show the verified rank; offline runs are queued for later. */
   async onGameOver(seed: string, encodedLog: string): Promise<void> {
     if (!ONLINE_CONFIGURED) return;
     const token = ++this.submitToken;
+    const run: PendingRun = { seed, log: encodedLog, finishedAt: Date.now() };
     this.lastScoreId = null;
     this.panel.hidden = false;
     this.shareBtn.disabled = true;
+    this.shareBtn.hidden = false;
     this.nickError.textContent = '';
+    if (!navigator.onLine) {
+      this.queue(run);
+      return;
+    }
     this.setStatus('Checking your run with the swamp judges…', 'pending');
     try {
       const online = await this.load();
@@ -89,10 +111,60 @@ export class OnlineUi {
       this.setStatus(`Verified! #${result.rank} all-time${daily}`, 'ok');
       this.fbLinkBtn.hidden = !online.isFacebookEnabled();
       await this.showNickname(online);
+      void this.flushPending();
     } catch (err) {
       if (token !== this.submitToken) return;
-      this.setStatus(`Score not saved: ${errorText(err)}`, 'error');
+      if (statusOf(err) === 'network') this.queue(run);
+      else this.setStatus(`Score not saved: ${errorText(err)}`, 'error');
     }
+  }
+
+  private queue(run: PendingRun): void {
+    this.pending.enqueue(run);
+    this.shareBtn.hidden = true;
+    this.setStatus('Saved offline. It’ll post to the leaderboard when you’re back online.', 'queued');
+    this.refreshPendingNote();
+  }
+
+  /** Post queued offline runs, oldest first. Safe to call any time; it no-ops when offline or busy. */
+  async flushPending(): Promise<void> {
+    if (!ONLINE_CONFIGURED || this.flushing || !navigator.onLine) return;
+    const runs = this.pending.peekAll().slice(0, FLUSH_BATCH);
+    if (!runs.length) return;
+    this.flushing = true;
+    let posted = 0;
+    try {
+      const online = await this.load();
+      for (const run of runs) {
+        let status: SubmitStatus = 201;
+        try {
+          await online.submitRun(run.seed, run.log);
+        } catch (err) {
+          status = statusOf(err);
+        }
+        const decision = flushDecision(status);
+        if (decision === 'remove') this.pending.remove(run);
+        if (status === 201) posted++;
+        if (decision === 'stop') break;
+      }
+    } catch (err) {
+      // The online chunk failed to load; the queue is untouched and retried on the next 'online' event.
+      console.warn('Could not post offline runs', err);
+    } finally {
+      this.flushing = false;
+      this.refreshPendingNote(posted);
+    }
+  }
+
+  private refreshPendingNote(justPosted = 0): void {
+    if (!ONLINE_CONFIGURED) return;
+    const waiting = this.pending.count();
+    const parts = [
+      justPosted ? `Posted ${plural(justPosted, 'offline run')} to the leaderboard!` : '',
+      waiting ? `${plural(waiting, 'run')} waiting to post` : '',
+    ].filter(Boolean);
+    this.pendingNote.textContent = parts.join(' · ');
+    this.pendingNote.hidden = parts.length === 0;
   }
 
   private async showNickname(online: OnlineModule): Promise<void> {
@@ -159,7 +231,10 @@ export class OnlineUi {
           : 'No scores yet. Be the first!';
       this.boardList.replaceChildren(...rows.map((r) => boardRow(r, r.userId === me)));
     } catch (err) {
-      this.boardStatus.textContent = `Couldn’t load the leaderboard: ${errorText(err)}`;
+      const offline = !navigator.onLine || /failed to fetch|network|load failed/i.test(errorText(err));
+      this.boardStatus.textContent = offline
+        ? 'You’re offline. Leaderboards need a connection.'
+        : `Couldn’t load the leaderboard: ${errorText(err)}`;
     }
   }
 
@@ -178,7 +253,7 @@ export class OnlineUi {
     }
   }
 
-  private setStatus(text: string, tone: 'pending' | 'ok' | 'error'): void {
+  private setStatus(text: string, tone: 'pending' | 'ok' | 'queued' | 'error'): void {
     this.status.textContent = text;
     this.status.dataset.tone = tone;
   }

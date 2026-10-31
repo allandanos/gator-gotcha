@@ -35,21 +35,40 @@ interface Envelope<T> {
   error: string | null;
 }
 
+/** A failed submission, carrying the HTTP status (or 'network' when the server was never reached). */
+export class SubmitError extends Error {
+  constructor(
+    message: string,
+    readonly status: number | 'network',
+  ) {
+    super(message);
+    this.name = 'SubmitError';
+  }
+}
+
 /** Submit a finished run for server-side replay verification. */
 export async function submitRun(seed: string, log: string): Promise<SubmitResult> {
-  const { token } = await ensureSession();
-  const res = await fetch('/api/scores', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
-    body: JSON.stringify({ seed, log }),
-  });
+  let res: Response;
+  try {
+    const { token } = await ensureSession();
+    res = await fetch('/api/scores', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify({ seed, log }),
+    });
+  } catch (err) {
+    // fetch (or the anonymous sign-in) never reached a server.
+    throw new SubmitError(err instanceof Error ? err.message : 'Network error', 'network');
+  }
   let body: Envelope<SubmitResult> | null = null;
   try {
     body = (await res.json()) as Envelope<SubmitResult>;
   } catch {
     // Non-JSON (e.g. offline proxy page) falls through to the generic error.
   }
-  if (!res.ok || !body?.ok || !body.data) throw new Error(body?.error ?? `Server error (${res.status})`);
+  if (!res.ok || !body?.ok || !body.data) {
+    throw new SubmitError(body?.error ?? `Server error (${res.status})`, res.ok ? 500 : res.status);
+  }
   return body.data;
 }
 

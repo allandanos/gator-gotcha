@@ -42,6 +42,8 @@ export class Renderer {
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Canvas 2D is not supported in this browser.');
     this.ctx = ctx;
+    // Mobile browsers settle the viewport after boot, often without a window resize event.
+    if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => this.resize()).observe(canvas);
   }
 
   resize(): void {
@@ -51,6 +53,14 @@ export class Renderer {
     this.canvas.width = Math.round(this.cssW * this.dpr);
     this.canvas.height = Math.round(this.cssH * this.dpr);
     this.scale = viewScale(this.cssW, this.cssH);
+  }
+
+  /** Cheap per-frame guard so the backing store can never stay out of sync with the CSS size. */
+  private syncSize(): void {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    if (this.canvas.clientWidth !== this.cssW || this.canvas.clientHeight !== this.cssH || dpr !== this.dpr) {
+      this.resize();
+    }
   }
 
   setMap(map: GameMap): void {
@@ -75,6 +85,7 @@ export class Renderer {
   }
 
   render(prev: World, cur: World, alpha: number, fx: Effects, t: number): void {
+    this.syncSize();
     const { ctx } = this;
     const bake = this.ensureBake();
     const duck = { ...cur.duck, pos: lerpVec(prev.duck.pos, cur.duck.pos, alpha) };

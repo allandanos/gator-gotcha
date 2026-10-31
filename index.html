@@ -6,10 +6,22 @@
     <meta name="description" content="Gator Gotcha — grab the eggs, dodge the gator, hide behind logs." />
     <meta name="theme-color" content="#2f9fc4" />
     <title>Gator Gotcha</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐊</text></svg>" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@600;800&display=swap" rel="stylesheet" />
+    <link rel="icon" href="/icons/icon-192.png" type="image/png" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Gator Gotcha" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Gator Gotcha" />
+    <meta property="og:title" content="Gator Gotcha — a swamp chase" />
+    <meta property="og:description" content="Grab the eggs, dodge the gator, hide behind logs. Free in your browser." />
+    <meta property="og:url" content="https://gator-gotcha-ten.vercel.app/" />
+    <meta property="og:image" content="https://gator-gotcha-ten.vercel.app/api/og" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
   </head>
   <body>
     <main class="game">
@@ -39,22 +51,27 @@
 
       <section id="screen-title" class="screen" aria-labelledby="title-heading">
         <div class="card card--title">
-          <p class="eyebrow">A swamp chase</p>
-          <h1 id="title-heading" class="logo"><span>Gator</span><span>Gotcha!</span></h1>
-          <p class="lede">Waddle around the swamp grabbing eggs. Each egg makes the gator faster and sharper-eyed. Duck behind logs and reeds to break its line of sight.</p>
-          <ul class="controls">
-            <li><kbd>WASD</kbd> / <kbd>↑←↓→</kbd> move</li>
-            <li><kbd>Shift</kbd> dash</li>
-            <li><kbd>Esc</kbd> pause · <kbd>M</kbd> mute</li>
-            <li class="touch-only">Drag left side to move · tap <b>Dash</b></li>
-          </ul>
-          <p id="challenge-banner" class="challenge" hidden></p>
-          <div class="actions">
-            <button id="play-btn" class="btn btn--primary" type="button" data-autofocus>Play</button>
-            <button id="daily-btn" class="btn btn--daily" type="button">Daily Swamp</button>
+          <div class="card-col">
+            <p class="eyebrow">A swamp chase</p>
+            <h1 id="title-heading" class="logo"><span>Gator</span><span>Gotcha!</span></h1>
+            <p class="lede">Waddle around the swamp grabbing eggs. Each egg makes the gator faster and sharper-eyed. Duck behind logs and reeds to break its line of sight.</p>
           </div>
-          <p class="meta">Swamp <code id="title-seed"></code> · Best <b id="title-best">0</b> · <button id="title-board-btn" class="link-btn" type="button" data-online>Leaderboard</button></p>
-          <p class="meta meta--fine"><a href="/privacy.html">Privacy</a></p>
+          <div class="card-col">
+            <ul class="controls">
+              <li><kbd>WASD</kbd> / <kbd>↑←↓→</kbd> move</li>
+              <li><kbd>Shift</kbd> dash</li>
+              <li><kbd>Esc</kbd> pause · <kbd>M</kbd> mute</li>
+              <li class="touch-only">Drag left side to move · tap <b>Dash</b></li>
+            </ul>
+            <p id="challenge-banner" class="challenge" hidden></p>
+            <div class="actions">
+              <button id="play-btn" class="btn btn--primary" type="button" data-autofocus>Play</button>
+              <button id="daily-btn" class="btn btn--daily" type="button">Daily Swamp</button>
+            </div>
+            <p class="meta">Swamp <code id="title-seed"></code> · Best <b id="title-best">0</b> · <button id="title-board-btn" class="link-btn" type="button" data-online>Leaderboard</button></p>
+            <p id="pending-note" class="meta meta--fine" data-online hidden></p>
+            <p class="meta meta--fine"><button id="install-btn" class="link-btn" type="button" hidden>Install app</button><span id="install-hint" hidden>Install: tap Share → Add to Home Screen</span><span id="install-sep" hidden> · </span><a href="/privacy.html">Privacy</a></p>
+          </div>
         </div>
       </section>
 
@@ -70,33 +87,37 @@
 
       <section id="screen-over" class="screen" aria-labelledby="over-heading" hidden>
         <div class="card card--over">
-          <h2 id="over-heading" class="heading heading--chomp">CHOMP!</h2>
-          <p id="over-newbest" class="badge" hidden>New best!</p>
-          <p class="big-score"><span id="over-score">0</span><small>points</small></p>
-          <dl class="over-stats">
-            <div><dt>Eggs</dt><dd id="over-eggs">0</dd></div>
-            <div><dt>Survived</dt><dd id="over-time">0:00</dd></div>
-            <div><dt>Best</dt><dd id="over-best">0</dd></div>
-          </dl>
-          <div id="over-online" class="online" data-online hidden>
-            <p id="over-status" class="online-status" role="status" aria-live="polite"></p>
-            <form id="nickname-form" class="nickname" hidden>
-              <label for="nickname-input">Playing as</label>
-              <input id="nickname-input" name="nickname" maxlength="16" autocomplete="nickname" spellcheck="false" />
-              <button class="btn btn--small" type="submit">Save</button>
-              <p id="nickname-error" class="field-error" role="alert"></p>
-            </form>
-            <div class="actions actions--tight">
-              <button id="fb-share-btn" class="btn btn--fb btn--small" type="button" disabled>Share on Facebook</button>
-              <button id="over-board-btn" class="btn btn--small" type="button">Leaderboard</button>
-              <button id="fb-link-btn" class="btn btn--small" type="button" hidden>Connect Facebook</button>
+          <div class="card-col">
+            <h2 id="over-heading" class="heading heading--chomp">CHOMP!</h2>
+            <p id="over-newbest" class="badge" hidden>New best!</p>
+            <p class="big-score"><span id="over-score">0</span><small>points</small></p>
+            <dl class="over-stats">
+              <div><dt>Eggs</dt><dd id="over-eggs">0</dd></div>
+              <div><dt>Survived</dt><dd id="over-time">0:00</dd></div>
+              <div><dt>Best</dt><dd id="over-best">0</dd></div>
+            </dl>
+          </div>
+          <div class="card-col">
+            <div id="over-online" class="online" data-online hidden>
+              <p id="over-status" class="online-status" role="status" aria-live="polite"></p>
+              <form id="nickname-form" class="nickname" hidden>
+                <label for="nickname-input">Playing as</label>
+                <input id="nickname-input" name="nickname" maxlength="16" autocomplete="nickname" spellcheck="false" />
+                <button class="btn btn--small" type="submit">Save</button>
+                <p id="nickname-error" class="field-error" role="alert"></p>
+              </form>
+              <div class="actions actions--tight">
+                <button id="fb-share-btn" class="btn btn--fb btn--small" type="button" disabled>Share on Facebook</button>
+                <button id="over-board-btn" class="btn btn--small" type="button">Leaderboard</button>
+                <button id="fb-link-btn" class="btn btn--small" type="button" hidden>Connect Facebook</button>
+              </div>
             </div>
+            <div class="actions">
+              <button id="retry-btn" class="btn btn--primary" type="button" data-autofocus>Retry this swamp</button>
+              <button id="new-btn" class="btn" type="button">New swamp</button>
+            </div>
+            <p class="meta">Swamp <code id="over-seed"></code> <button id="copy-btn" class="link-btn" type="button">Copy link</button></p>
           </div>
-          <div class="actions">
-            <button id="retry-btn" class="btn btn--primary" type="button" data-autofocus>Retry this swamp</button>
-            <button id="new-btn" class="btn" type="button">New swamp</button>
-          </div>
-          <p class="meta">Swamp <code id="over-seed"></code> <button id="copy-btn" class="link-btn" type="button">Copy link</button></p>
         </div>
       </section>
 

@@ -2,6 +2,8 @@ import { escapeHtml, isUuid, logError } from './_lib/http.js';
 import { formatScore, formatTicks } from './_lib/format.js';
 import { supabaseRepository, type SharedScore } from './_lib/repository.js';
 
+// No meta refresh: link-preview crawlers follow it and would scrape the untagged game page instead.
+// People are forwarded by /share-redirect.js, which crawlers don't execute.
 function page(origin: string, s: SharedScore): string {
   const title = `${s.nickname} scored ${formatScore(s.score)} in Gator Gotcha`;
   const desc = s.dailyDate
@@ -22,11 +24,13 @@ function page(origin: string, s: SharedScore): string {
 <meta property="og:description" content="${d}">
 <meta property="og:url" content="${u}">
 <meta property="og:image" content="${img}">
+<meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="${t}">
 <meta name="twitter:card" content="summary_large_image">
-<meta http-equiv="refresh" content="0;url=${tg}">
 <link rel="canonical" href="${u}">
-</head><body><p><a href="${tg}">Play Gator Gotcha</a></p></body></html>`;
+<script src="/share-redirect.js" defer></script>
+</head><body><p><a id="play" href="${tg}" data-target="${tg}">Play Gator Gotcha</a></p></body></html>`;
 }
 
 function notFound(origin: string): Response {

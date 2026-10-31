@@ -39,4 +39,19 @@ describe('share page', () => {
     expect(html).toContain('og:image" content="https://g.example/api/og?id=11111111');
     expect(html).toContain('/?seed=abc123&#38;challenge=');
   });
+
+  it('does not meta-refresh, so crawlers stay on the tagged page', () => {
+    const html = renderSharePage('https://g.example', {
+      id: '11111111-1111-4111-8111-111111111111',
+      seed: 'abc123',
+      dailyDate: '2026-10-31',
+      score: 10,
+      eggs: 1,
+      ticks: 60,
+      nickname: 'Duck',
+    });
+    expect(html).not.toMatch(/http-equiv/i);
+    expect(html).toContain('<script src="/share-redirect.js" defer></script>');
+    expect(html).toContain('data-target="https://g.example/?seed=abc123');
+  });
 });
