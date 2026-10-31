@@ -46,3 +46,21 @@ the rate-limit count-then-insert is not atomic.
   `events_daily_active` → `[{"day":"2026-10-31","players":0,"sessions":1,"runs":0}]`.
   Local test row: session `b92a7b34-38fe-4a51-86d2-ac95b4d1003e`, `app_version = 'local-test'`.
 - `git diff --stat src/sim` → empty (golden snapshot unchanged).
+
+**Staging (Vercel Preview `gator-gotcha-17dchk4gl-allandanos.vercel.app`, commit `c8869f6`)**
+- `vercel curl /api/events --deployment <preview> -- -X POST -d '{}'` → `400 Invalid events batch`.
+- Headless Chrome (Playwright, `x-vercel-trusted-oidc-idp-token` scoped to the preview origin) played
+  one idle run on seed `stagetest`: `title_view`, `run_start`, `run_end` each → `202`, `appVersion=c8869f6`.
+- Service-role count: `{ 'local-test title_view': 1, 'c8869f6 title_view': 2, 'c8869f6 run_start': 1, 'c8869f6 run_end': 1 }`.
+- Test sessions (kept, per "delete nothing"): `b92a7b34-38fe-4a51-86d2-ac95b4d1003e` (local),
+  `2898c67f-6461-4b6b-b571-793b58e30f38`, `1d9a06db-0118-4d88-8148-8fdc336ce51c` (staging).
+- Side effect cleaned up: the staging run also submitted a score to the shared leaderboard (anonymous
+  user `80bcff6d-f585-4673-a36a-d19f11682662`, Duck8127, 350 on `stagetest`). Verified as the session's
+  own (anonymous, created 3 s before the score, no other scores) and deleted by id via the auth admin
+  API; profile and score cascaded.
+- Observed: a brand-new player's first-run events carry no `user_id`, because the `run_end` flush races
+  the anonymous sign-in that the score submit performs. Later batches in that session (and return
+  visits) carry it. Accepted for Phase 0.
+
+**Staging caveat:** Preview shares the production Supabase project, so staging plays post real scores.
+A separate staging Supabase project would remove this; not in Phase 0 scope.
