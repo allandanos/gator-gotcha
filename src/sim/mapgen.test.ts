@@ -1,8 +1,8 @@
-import { ARENA, GATOR, MAP } from '../config';
-import { dist } from '../core/vec';
-import { circleIntersectsRect, rectsOverlap } from './geometry';
-import { generateMap } from './mapgen';
-import { cellOf, floodCount, freeCells } from './nav';
+import { ARENA, GATOR, MAP } from '../config.js';
+import { dist } from '../core/vec.js';
+import { circleIntersectsRect, rectsOverlap } from './geometry.js';
+import { generateMap } from './mapgen.js';
+import { cellOf, floodCount, freeCells } from './nav.js';
 
 describe('generateMap', () => {
   it('is deterministic per seed', () => {

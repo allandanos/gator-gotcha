@@ -1,5 +1,5 @@
-import { clamp, type Vec } from '../core/vec';
-import type { Obstacle } from './types';
+import { clamp, type Vec } from '../core/vec.js';
+import type { Obstacle } from './types.js';
 
 export function circleIntersectsRect(c: Vec, r: number, o: Obstacle): boolean {
   const nx = clamp(c.x, o.x, o.x + o.w);

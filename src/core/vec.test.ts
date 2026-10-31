@@ -1,4 +1,4 @@
-import { angleDiff, limit, normalize, turnToward, len } from './vec';
+import { angleDiff, limit, normalize, turnToward, len } from './vec.js';
 
 describe('vec', () => {
   it('normalizes and handles zero', () => {

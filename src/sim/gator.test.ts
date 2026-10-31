@@ -1,10 +1,10 @@
-import { GATOR, SIM_DT } from '../config';
-import { Rng } from '../core/rng';
-import { dist } from '../core/vec';
-import { gatorStats } from './difficulty';
-import { createGator, updateGator, type GatorContext } from './gator';
-import { buildNav } from './nav';
-import type { GameMap, Gator, Obstacle } from './types';
+import { GATOR, SIM_DT } from '../config.js';
+import { Rng } from '../core/rng.js';
+import { dist } from '../core/vec.js';
+import { gatorStats } from './difficulty.js';
+import { createGator, updateGator, type GatorContext } from './gator.js';
+import { buildNav } from './nav.js';
+import type { GameMap, Gator, Obstacle } from './types.js';
 
 const mapWith = (obstacles: Obstacle[]): GameMap => ({
   seed: 't',

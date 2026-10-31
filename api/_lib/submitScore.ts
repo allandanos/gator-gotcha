@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
-import { parseSeed } from '../../src/core/rng';
-import { MAX_ENCODED_LOG, dailyDateOf, dailySeed, decodeLog, replayRun } from '../../src/sim/replay';
-import type { ScoreRepository } from './repository';
+import { parseSeed } from '../../src/core/rng.js';
+import { MAX_ENCODED_LOG, dailyDateOf, dailySeed, decodeLog, replayRun } from '../../src/sim/replay.js';
+import type { ScoreRepository } from './repository.js';
 
 export const RATE_LIMIT_PER_MINUTE = 10;
 const DAY_MS = 24 * 60 * 60 * 1000;

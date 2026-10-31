@@ -1,7 +1,7 @@
-import { len } from '../core/vec';
-import { recordBotRun } from './__fixtures__/recordBot';
-import { dequantizeInput, quantizeInput } from './input';
-import { dailyDateOf, dailySeed, decodeLog, encodeLog, replayRun } from './replay';
+import { len } from '../core/vec.js';
+import { recordBotRun } from './__fixtures__/recordBot.js';
+import { dequantizeInput, quantizeInput } from './input.js';
+import { dailyDateOf, dailySeed, decodeLog, encodeLog, replayRun } from './replay.js';
 
 const record = recordBotRun;
 
@@ -93,7 +93,7 @@ describe('daily seed', () => {
 
 describe('InputRecorder', () => {
   it('grows past its initial capacity and resets', async () => {
-    const { InputRecorder } = await import('./input');
+    const { InputRecorder } = await import('./input.js');
     const r = new InputRecorder();
     for (let i = 0; i < 10_000; i++) r.push(i % 256);
     expect(r.length).toBe(10_000);

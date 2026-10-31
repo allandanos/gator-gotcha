@@ -1,6 +1,6 @@
-import { resolveCircleRect, segmentIntersectsRect } from './geometry';
-import { moveCircle } from './collision';
-import type { Obstacle } from './types';
+import { resolveCircleRect, segmentIntersectsRect } from './geometry.js';
+import { moveCircle } from './collision.js';
+import type { Obstacle } from './types.js';
 
 const box: Obstacle = { kind: 'log', x: 100, y: 100, w: 100, h: 40 };
 

@@ -1,6 +1,6 @@
-import { bearerToken, fail, logError, ok } from './_lib/http';
-import { supabaseRepository } from './_lib/repository';
-import { submitScore } from './_lib/submitScore';
+import { bearerToken, fail, logError, ok } from './_lib/http.js';
+import { supabaseRepository } from './_lib/repository.js';
+import { submitScore } from './_lib/submitScore.js';
 
 export const config = { maxDuration: 30 };
 

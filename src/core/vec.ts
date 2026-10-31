@@ -1,4 +1,4 @@
-import { datan2, dcos, dhypot, dsin } from './dmath';
+import { datan2, dcos, dhypot, dsin } from './dmath.js';
 
 export interface Vec {
   readonly x: number;

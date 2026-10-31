@@ -1,4 +1,4 @@
-import type { Vec } from '../core/vec';
+import type { Vec } from '../core/vec.js';
 
 export type ObstacleKind = 'log' | 'reeds';
 

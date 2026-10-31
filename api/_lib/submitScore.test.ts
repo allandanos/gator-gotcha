@@ -1,7 +1,7 @@
-import { recordBotRun } from '../../src/sim/__fixtures__/recordBot';
-import { dailySeed, encodeLog } from '../../src/sim/replay';
-import type { NewScore, ScoreRepository } from './repository';
-import { RATE_LIMIT_PER_MINUTE, submitScore } from './submitScore';
+import { recordBotRun } from '../../src/sim/__fixtures__/recordBot.js';
+import { dailySeed, encodeLog } from '../../src/sim/replay.js';
+import type { NewScore, ScoreRepository } from './repository.js';
+import { RATE_LIMIT_PER_MINUTE, submitScore } from './submitScore.js';
 
 const NOW = new Date(Date.UTC(2026, 9, 31, 12));
 const USER = '11111111-1111-4111-8111-111111111111';

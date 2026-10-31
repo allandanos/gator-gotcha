@@ -1,9 +1,9 @@
-import { ARENA, DUCK, GATOR, MAP } from '../config';
-import { hashSeed, Rng } from '../core/rng';
-import { dist, type Vec } from '../core/vec';
-import { circleIntersectsRect, rectsOverlap } from './geometry';
-import { buildNav, cellOf, floodCount, freeCells } from './nav';
-import type { GameMap, Obstacle } from './types';
+import { ARENA, DUCK, GATOR, MAP } from '../config.js';
+import { hashSeed, Rng } from '../core/rng.js';
+import { dist, type Vec } from '../core/vec.js';
+import { circleIntersectsRect, rectsOverlap } from './geometry.js';
+import { buildNav, cellOf, floodCount, freeCells } from './nav.js';
+import type { GameMap, Obstacle } from './types.js';
 
 function randomObstacle(rng: Rng): Obstacle {
   if (rng.chance(0.55)) {

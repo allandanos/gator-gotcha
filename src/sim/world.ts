@@ -1,11 +1,11 @@
-import { DUCK, EGGS, GATOR, ARENA } from '../config';
-import { hashSeed, Rng } from '../core/rng';
-import { angleOf, dist, sub, type Vec } from '../core/vec';
-import { gatorStats } from './difficulty';
-import { createDuck, updateDuck } from './duck';
-import { createGator, snoutOf, updateGator } from './gator';
-import { generateMap, isOpen } from './mapgen';
-import type { Egg, GameEvent, GameMap, InputState, World } from './types';
+import { DUCK, EGGS, GATOR, ARENA } from '../config.js';
+import { hashSeed, Rng } from '../core/rng.js';
+import { angleOf, dist, sub, type Vec } from '../core/vec.js';
+import { gatorStats } from './difficulty.js';
+import { createDuck, updateDuck } from './duck.js';
+import { createGator, snoutOf, updateGator } from './gator.js';
+import { generateMap, isOpen } from './mapgen.js';
+import type { Egg, GameEvent, GameMap, InputState, World } from './types.js';
 
 const EGG_SPAWN_TRIES = 200;
 const EGG_MIN_SPACING = 80;

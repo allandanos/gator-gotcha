@@ -1,12 +1,12 @@
-import { GATOR } from '../config';
-import { dcos, dsin } from '../core/dmath';
-import type { Rng } from '../core/rng';
-import { angleDiff, angleOf, dist, fromAngle, scale, sub, turnToward, type Vec } from '../core/vec';
-import { moveCircle } from './collision';
-import type { GatorStats } from './difficulty';
-import { centerOf, findPath, freeCells, gridClear } from './nav';
-import { canSee } from './sight';
-import type { GameEvent, GameMap, Gator } from './types';
+import { GATOR } from '../config.js';
+import { dcos, dsin } from '../core/dmath.js';
+import type { Rng } from '../core/rng.js';
+import { angleDiff, angleOf, dist, fromAngle, scale, sub, turnToward, type Vec } from '../core/vec.js';
+import { moveCircle } from './collision.js';
+import type { GatorStats } from './difficulty.js';
+import { centerOf, findPath, freeCells, gridClear } from './nav.js';
+import { canSee } from './sight.js';
+import type { GameEvent, GameMap, Gator } from './types.js';
 
 const WAYPOINT_REACHED = 14;
 const SWEEP_TURN_RATE = 1.6;

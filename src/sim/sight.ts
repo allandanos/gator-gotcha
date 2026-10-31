@@ -1,7 +1,7 @@
-import { GATOR } from '../config';
-import { angleDiff, angleOf, dist, fromAngle, sub, type Vec } from '../core/vec';
-import { segmentEntryT, segmentIntersectsRect } from './geometry';
-import type { Obstacle } from './types';
+import { GATOR } from '../config.js';
+import { angleDiff, angleOf, dist, fromAngle, sub, type Vec } from '../core/vec.js';
+import { segmentEntryT, segmentIntersectsRect } from './geometry.js';
+import type { Obstacle } from './types.js';
 
 export interface Cone {
   readonly origin: Vec;

@@ -1,4 +1,4 @@
-import { datan, datan2, dcos, dhypot, dsin } from './dmath';
+import { datan, datan2, dcos, dhypot, dsin } from './dmath.js';
 
 const samples = Array.from({ length: 2001 }, (_, i) => -50 + i * 0.05);
 

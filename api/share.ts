@@ -1,6 +1,6 @@
-import { escapeHtml, isUuid, logError } from './_lib/http';
-import { formatScore, formatTicks } from './_lib/format';
-import { supabaseRepository, type SharedScore } from './_lib/repository';
+import { escapeHtml, isUuid, logError } from './_lib/http.js';
+import { formatScore, formatTicks } from './_lib/format.js';
+import { supabaseRepository, type SharedScore } from './_lib/repository.js';
 
 function page(origin: string, s: SharedScore): string {
   const title = `${s.nickname} scored ${formatScore(s.score)} in Gator Gotcha`;

@@ -1,5 +1,5 @@
-import { canSee, hasLineOfSight, inCone, rayDistance, visibleConePolygon, type Cone } from './sight';
-import type { Obstacle } from './types';
+import { canSee, hasLineOfSight, inCone, rayDistance, visibleConePolygon, type Cone } from './sight.js';
+import type { Obstacle } from './types.js';
 
 const cone: Cone = { origin: { x: 0, y: 0 }, heading: 0, range: 300, angle: Math.PI / 2 };
 const log: Obstacle = { kind: 'log', x: 100, y: -20, w: 30, h: 40 };

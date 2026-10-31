@@ -1,7 +1,7 @@
-import { ARENA } from '../config';
-import { add, clamp, len, scale, type Vec } from '../core/vec';
-import { resolveCircleRect } from './geometry';
-import type { Obstacle } from './types';
+import { ARENA } from '../config.js';
+import { add, clamp, len, scale, type Vec } from '../core/vec.js';
+import { resolveCircleRect } from './geometry.js';
+import type { Obstacle } from './types.js';
 
 /** Keep a circle inside the arena bounds. */
 export function clampToArena(p: Vec, r: number): Vec {

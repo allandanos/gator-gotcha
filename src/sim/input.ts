@@ -1,6 +1,6 @@
-import { datan2 } from '../core/dmath';
-import { fromAngle, len } from '../core/vec';
-import type { InputState } from './types';
+import { datan2 } from '../core/dmath.js';
+import { fromAngle, len } from '../core/vec.js';
+import type { InputState } from './types.js';
 
 /**
  * One byte per sim tick: bits 0–4 direction (32 steps), bits 5–6 magnitude level (0 = idle),

@@ -1,7 +1,7 @@
-import { DUCK } from '../config';
-import { add, angleOf, len, limit, scale, sub, type Vec } from '../core/vec';
-import { moveCircle } from './collision';
-import type { Duck, InputState, Obstacle } from './types';
+import { DUCK } from '../config.js';
+import { add, angleOf, len, limit, scale, sub, type Vec } from '../core/vec.js';
+import { moveCircle } from './collision.js';
+import type { Duck, InputState, Obstacle } from './types.js';
 
 export function createDuck(pos: Vec): Duck {
   return {

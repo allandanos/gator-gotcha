@@ -1,8 +1,8 @@
-import { ARENA, NAV_CELL } from '../config';
-import { circleIntersectsRect } from './geometry';
-import type { NavGrid, Obstacle } from './types';
-import { dhypot } from '../core/dmath';
-import type { Vec } from '../core/vec';
+import { ARENA, NAV_CELL } from '../config.js';
+import { circleIntersectsRect } from './geometry.js';
+import type { NavGrid, Obstacle } from './types.js';
+import { dhypot } from '../core/dmath.js';
+import type { Vec } from '../core/vec.js';
 
 export interface Cell {
   readonly c: number;

@@ -60,7 +60,7 @@
   ],
   "functions": {
     "api/og.ts": {
-      "includeFiles": "api/_fonts/**"
+      "includeFiles": "{api/_fonts/**,node_modules/harfbuzzjs/*.wasm}"
     }
   }
 }

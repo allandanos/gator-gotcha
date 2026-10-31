@@ -1,7 +1,7 @@
-import { EGGS, SIM_DT } from '../config';
-import { Rng } from '../core/rng';
-import type { InputState, World } from './types';
-import { createWorld, step } from './world';
+import { EGGS, SIM_DT } from '../config.js';
+import { Rng } from '../core/rng.js';
+import type { InputState, World } from './types.js';
+import { createWorld, step } from './world.js';
 
 const scripted = (seed: number) => {
   const rng = new Rng(seed);

@@ -1,4 +1,4 @@
-import { SIM_DT } from '../config';
+import { SIM_DT } from '../config.js';
 
 const MAX_FRAME = 0.25;
 

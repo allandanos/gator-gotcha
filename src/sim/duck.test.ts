@@ -1,7 +1,7 @@
-import { DUCK, SIM_DT } from '../config';
-import { len } from '../core/vec';
-import { createDuck, updateDuck } from './duck';
-import type { Duck, InputState } from './types';
+import { DUCK, SIM_DT } from '../config.js';
+import { len } from '../core/vec.js';
+import { createDuck, updateDuck } from './duck.js';
+import type { Duck, InputState } from './types.js';
 
 const run = (d: Duck, input: InputState, seconds: number): Duck => {
   let s = d;

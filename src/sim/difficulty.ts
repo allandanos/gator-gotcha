@@ -1,5 +1,5 @@
-import { DIFFICULTY, GATOR } from '../config';
-import { clamp, lerp } from '../core/vec';
+import { DIFFICULTY, GATOR } from '../config.js';
+import { clamp, lerp } from '../core/vec.js';
 
 export interface GatorStats {
   readonly level: number;

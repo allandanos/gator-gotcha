@@ -1,4 +1,4 @@
-import { hashSeed, parseSeed, randomSeed, Rng } from './rng';
+import { hashSeed, parseSeed, randomSeed, Rng } from './rng.js';
 
 describe('Rng', () => {
   it('produces the same sequence for the same seed', () => {

@@ -1,6 +1,6 @@
-import { DUCK, GATOR } from '../config';
-import { difficultyLevel, gatorStats } from './difficulty';
-import { computeScore } from './scoring';
+import { DUCK, GATOR } from '../config.js';
+import { difficultyLevel, gatorStats } from './difficulty.js';
+import { computeScore } from './scoring.js';
 
 describe('difficulty', () => {
   it('ramps monotonically with time and eggs, and caps', () => {

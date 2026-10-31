@@ -1,7 +1,7 @@
-import { SIM_DT } from '../config';
-import { computeScore } from './scoring';
-import { dequantizeInput, type InputByte } from './input';
-import { createWorld, step } from './world';
+import { SIM_DT } from '../config.js';
+import { computeScore } from './scoring.js';
+import { dequantizeInput, type InputByte } from './input.js';
+import { createWorld, step } from './world.js';
 
 /** Longest run the server will replay: 20 minutes of sim ticks. */
 export const MAX_REPLAY_TICKS = 20 * 60 * 60;

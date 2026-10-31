@@ -1,6 +1,6 @@
-import { renderSharePage } from '../share';
-import { bearerToken, escapeHtml, isUuid } from './http';
-import { formatTicks } from './format';
+import { renderSharePage } from '../share.js';
+import { bearerToken, escapeHtml, isUuid } from './http.js';
+import { formatTicks } from './format.js';
 
 describe('http helpers', () => {
   it('extracts bearer tokens', () => {

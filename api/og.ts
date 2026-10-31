@@ -1,9 +1,9 @@
 import { readFile } from 'node:fs/promises';
 import { Resvg } from '@resvg/resvg-js';
 import satori from 'satori';
-import { isUuid, logError } from './_lib/http';
-import { formatScore, formatTicks } from './_lib/format';
-import { supabaseRepository, type SharedScore } from './_lib/repository';
+import { isUuid, logError } from './_lib/http.js';
+import { formatScore, formatTicks } from './_lib/format.js';
+import { supabaseRepository, type SharedScore } from './_lib/repository.js';
 
 type Node = { type: string; props: Record<string, unknown> & { children?: unknown } };
 const h = (type: string, style: Record<string, unknown>, children?: unknown): Node => ({

@@ -1,4 +1,4 @@
-import { SIM_DT } from '../../src/config';
+import { SIM_DT } from '../../src/config.js';
 
 export function formatTicks(ticks: number): string {
   const s = Math.floor(ticks * SIM_DT);

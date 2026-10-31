@@ -1,9 +1,9 @@
-import { SIM_DT } from '../../config';
-import { Rng } from '../../core/rng';
-import { dist, normalize, sub } from '../../core/vec';
-import { dequantizeInput, quantizeInput } from '../input';
-import { computeScore } from '../scoring';
-import { createWorld, step } from '../world';
+import { SIM_DT } from '../../config.js';
+import { Rng } from '../../core/rng.js';
+import { dist, normalize, sub } from '../../core/vec.js';
+import { dequantizeInput, quantizeInput } from '../input.js';
+import { computeScore } from '../scoring.js';
+import { createWorld, step } from '../world.js';
 
 /**
  * Test fixture: play a scripted egg-hunting bot, recording quantized input exactly like the
