@@ -1,4 +1,5 @@
 import type { Vec } from '../core/vec';
+import { isTypingTarget } from '../ui/dom';
 
 const UP = new Set(['KeyW', 'ArrowUp']);
 const DOWN = new Set(['KeyS', 'ArrowDown']);
@@ -12,6 +13,7 @@ export class Keyboard {
 
   constructor(target: Window = window) {
     target.addEventListener('keydown', (e) => {
+      if (isTypingTarget(e.target)) return;
       if (GAME_KEYS.has(e.code) && !(e.target instanceof HTMLButtonElement && e.code === 'Space')) e.preventDefault();
       this.held.add(e.code);
     });

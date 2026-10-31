@@ -9,11 +9,14 @@ import { readInput } from './input/input';
 import { TouchControls } from './input/touch';
 import { Effects } from './render/effects';
 import { Renderer } from './render/renderer';
+import { dequantizeInput, InputRecorder, quantizeInput } from './sim/input';
+import { dailyDateOf, dailySeed, encodeLog } from './sim/replay';
 import { computeScore } from './sim/scoring';
 import type { World } from './sim/types';
 import { createWorld, step } from './sim/world';
-import { $, formatTime } from './ui/dom';
+import { $, formatTime, isTypingTarget } from './ui/dom';
 import { Hud } from './ui/hud';
+import { OnlineUi } from './ui/onlineUi';
 import { fillGameOver, showScreen } from './ui/screens';
 import { loadBest, loadMuted, saveBest, saveMuted } from './ui/storage';
 
@@ -23,11 +26,14 @@ type Phase = 'title' | 'playing' | 'paused' | 'caught' | 'over';
 const CAUGHT_DELAY = 1.1;
 const MUSIC_INTENSITY = { wander: 0, search: 0.5, chase: 1 } as const;
 
-function seedUrl(seed: string): string {
+function seedUrl(seed: string, keepChallenge = false): string {
   const url = new URL(window.location.href);
   url.searchParams.set('seed', seed);
+  if (!keepChallenge) url.searchParams.delete('challenge');
   return url.toString();
 }
+
+const todayIso = (): string => dailyDateOf(dailySeed(new Date())) as string;
 
 function boot(): void {
   const canvas = $<HTMLCanvasElement>('#stage');
@@ -39,8 +45,13 @@ function boot(): void {
   const audio = new AudioEngine(loadMuted());
   const music = new Music(audio);
   const muteBtn = $<HTMLButtonElement>('#mute-btn');
+  const online = new OnlineUi(showScreen, todayIso);
+  const recorder = new InputRecorder();
 
-  let seed = parseSeed(new URL(window.location.href).searchParams.get('seed')) ?? randomSeed();
+  const params = new URL(window.location.href).searchParams;
+  let seed = parseSeed(params.get('seed')) ?? randomSeed();
+  // A shared-score link pins its seed; the challenge banner applies only while playing that seed.
+  const challengeSeed = params.get('challenge') ? seed : null;
   let world: World = createWorld(seed);
   let prev = world;
   let phase: Phase = 'title';
@@ -50,6 +61,7 @@ function boot(): void {
 
   renderer.setMap(world.map);
   $('#title-seed').textContent = seed;
+  void online.showChallenge(params.get('challenge'), seed);
   $('#title-best').textContent = String(best);
 
   const syncMute = () => {
@@ -72,7 +84,10 @@ function boot(): void {
     world = createWorld(seed);
     prev = world;
     renderer.setMap(world.map);
-    window.history.replaceState(null, '', seedUrl(seed));
+    recorder.reset();
+    const isChallenge = seed === challengeSeed;
+    if (!isChallenge) $('#challenge-banner').hidden = true;
+    window.history.replaceState(null, '', seedUrl(seed, isChallenge));
     fx.reset();
     touch.reset();
     hud.show(true);
@@ -109,6 +124,7 @@ function boot(): void {
     fillGameOver({ score, eggs: world.eggsCollected, time: formatTime(world.time), best, isNewBest, seed });
     hud.show(false);
     showScreen('over');
+    void online.onGameOver(seed, encodeLog(recorder.bytes()));
   };
 
   const update = (dt: number) => {
@@ -119,7 +135,10 @@ function boot(): void {
     }
     if (phase !== 'playing') return;
     prev = world;
-    world = step(world, readInput(keyboard, touch), dt);
+    // The sim only ever sees quantized input, so the recorded log replays identically on the server.
+    const input = quantizeInput(readInput(keyboard, touch));
+    recorder.push(input);
+    world = step(world, dequantizeInput(input), dt);
     if (world.events.length) {
       fx.handle(world.events);
       playEvents(audio, world.events);
@@ -144,6 +163,10 @@ function boot(): void {
 
   // Buttons.
   $('#play-btn').addEventListener('click', () => startRun(seed));
+  $('#daily-btn').addEventListener('click', () => startRun(dailySeed(new Date())));
+  $('#title-board-btn').addEventListener('click', () => void online.openBoard('title'));
+  $('#over-board-btn').addEventListener('click', () => void online.openBoard('over'));
+  $('#board-back-btn').addEventListener('click', () => online.closeBoard());
   $('#resume-btn').addEventListener('click', resume);
   $('#quit-btn').addEventListener('click', () => {
     phase = 'title';
@@ -158,7 +181,7 @@ function boot(): void {
   const copyBtn = $<HTMLButtonElement>('#copy-btn');
   copyBtn.addEventListener('click', async () => {
     try {
-      await navigator.clipboard.writeText(seedUrl(seed));
+      await navigator.clipboard.writeText(online.lastShareUrl ?? seedUrl(seed));
       copyBtn.textContent = 'Copied!';
     } catch {
       copyBtn.textContent = 'Copy failed';
@@ -167,14 +190,17 @@ function boot(): void {
   });
 
   // Global keys.
+  const boardOpen = () => !$('#screen-board').hidden;
   window.addEventListener('keydown', (e) => {
-    if (e.repeat) return;
-    if (e.code === 'Escape' || e.code === 'KeyP') {
+    if (e.repeat || isTypingTarget(e.target)) return;
+    if (e.code === 'Escape' && boardOpen()) {
+      online.closeBoard();
+    } else if (e.code === 'Escape' || e.code === 'KeyP') {
       if (phase === 'playing') pause();
       else if (phase === 'paused') resume();
     } else if (e.code === 'KeyM') {
       toggleMute();
-    } else if (e.code === 'Enter' && !(e.target instanceof HTMLButtonElement)) {
+    } else if (e.code === 'Enter' && !(e.target instanceof HTMLButtonElement) && !boardOpen()) {
       if (phase === 'title' || phase === 'over') startRun(seed);
     }
   });

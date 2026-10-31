@@ -1,4 +1,5 @@
 import { GATOR } from '../config';
+import { dcos, dsin } from '../core/dmath';
 import type { Rng } from '../core/rng';
 import { angleDiff, angleOf, dist, fromAngle, scale, sub, turnToward, type Vec } from '../core/vec';
 import { moveCircle } from './collision';
@@ -109,7 +110,7 @@ function plan(g: Gator, ctx: GatorContext): { gator: Gator; aim: Vec | null; spe
   const waitTimer = g.waitTimer - ctx.dt;
   if (waitTimer > 0) {
     const heading =
-      g.mode === 'search' ? g.heading + Math.sin(waitTimer * 2.2) * SWEEP_TURN_RATE * ctx.dt : g.heading;
+      g.mode === 'search' ? g.heading + dsin(waitTimer * 2.2) * SWEEP_TURN_RATE * ctx.dt : g.heading;
     return { gator: { ...g, waitTimer, heading, target: null, path: [] }, aim: null, speed: 0 };
   }
   const pause = ctx.rng.range(GATOR.wanderPauseMin, GATOR.wanderPauseMax);
@@ -130,7 +131,7 @@ export function updateGator(g0: Gator, ctx: GatorContext): GatorResult {
   const desired = angleOf(sub(planned.aim, g.pos));
   const heading = turnToward(g.heading, desired, GATOR.turnRate * ctx.dt);
   // Slow down while turning hard so it can't strafe; this is what makes juking work.
-  const alignment = Math.max(0.2, Math.cos(Math.min(Math.abs(angleDiff(heading, desired)), Math.PI / 2)));
+  const alignment = Math.max(0.2, dcos(Math.min(Math.abs(angleDiff(heading, desired)), Math.PI / 2)));
   const step = Math.min(planned.speed * alignment * ctx.dt, dist(g.pos, planned.aim));
   const pos = moveCircle(g.pos, scale(fromAngle(heading), step), GATOR.radius, ctx.map.obstacles);
   return { gator: { ...g, pos, heading }, events: perceived.events };

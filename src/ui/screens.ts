@@ -1,8 +1,13 @@
 import { $ } from './dom';
 
-export type ScreenId = 'title' | 'pause' | 'over';
+export type ScreenId = 'title' | 'pause' | 'over' | 'board';
 
-const IDS: Record<ScreenId, string> = { title: '#screen-title', pause: '#screen-pause', over: '#screen-over' };
+const IDS: Record<ScreenId, string> = {
+  title: '#screen-title',
+  pause: '#screen-pause',
+  over: '#screen-over',
+  board: '#screen-board',
+};
 
 /** Shows one overlay at a time and moves focus to its primary action. */
 export function showScreen(id: ScreenId | null): void {

@@ -1,3 +1,5 @@
+import { datan2, dcos, dhypot, dsin } from './dmath';
+
 export interface Vec {
   readonly x: number;
   readonly y: number;
@@ -7,10 +9,10 @@ export const vec = (x: number, y: number): Vec => ({ x, y });
 export const add = (a: Vec, b: Vec): Vec => ({ x: a.x + b.x, y: a.y + b.y });
 export const sub = (a: Vec, b: Vec): Vec => ({ x: a.x - b.x, y: a.y - b.y });
 export const scale = (a: Vec, s: number): Vec => ({ x: a.x * s, y: a.y * s });
-export const len = (a: Vec): number => Math.hypot(a.x, a.y);
-export const dist = (a: Vec, b: Vec): number => Math.hypot(a.x - b.x, a.y - b.y);
-export const fromAngle = (a: number, l = 1): Vec => ({ x: Math.cos(a) * l, y: Math.sin(a) * l });
-export const angleOf = (a: Vec): number => Math.atan2(a.y, a.x);
+export const len = (a: Vec): number => dhypot(a.x, a.y);
+export const dist = (a: Vec, b: Vec): number => dhypot(a.x - b.x, a.y - b.y);
+export const fromAngle = (a: number, l = 1): Vec => ({ x: dcos(a) * l, y: dsin(a) * l });
+export const angleOf = (a: Vec): number => datan2(a.y, a.x);
 export const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 export const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v));
 

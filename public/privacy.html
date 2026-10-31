@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Privacy · Gator Gotcha</title>
+    <meta name="description" content="What Gator Gotcha stores about players and how to delete it." />
+    <style>
+      :root { --ink: #24331c; --cream: #fff8e7; --grass: #8fd14f; }
+      body { margin: 0; background: var(--grass); color: var(--ink); font: 600 1rem/1.55 'Nunito', system-ui, sans-serif; }
+      main { max-width: 680px; margin: 32px auto; padding: 24px 28px; background: var(--cream); border: 3px solid var(--ink); border-radius: 24px; box-shadow: 8px 8px 0 var(--ink); }
+      @media (max-width: 720px) { main { margin: 16px; } }
+      h1 { margin-top: 0; font-size: 2rem; }
+      h2 { margin-top: 1.6em; font-size: 1.2rem; }
+      a { color: #2f7c3c; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Gator Gotcha privacy</h1>
+      <p>Last updated 31 October 2026.</p>
+
+      <h2>What we store</h2>
+      <ul>
+        <li><b>An anonymous account</b>: created only when you finish a run and your score is submitted. It's a random ID stored in your browser; no email or password.</li>
+        <li><b>Your nickname</b>: random (like "Duck1234") until you change it. Shown publicly on the leaderboard.</li>
+        <li><b>Your scores</b>: score, eggs, time survived, the swamp seed, and the inputs of the run (used only to verify the score is genuine).</li>
+        <li><b>If you connect Facebook</b>: your Facebook user ID, name and profile picture, used to show your name/avatar on the leaderboard and keep your scores across devices. We don't post to Facebook on your behalf.</li>
+        <li><b>On your device only</b>: your local best score and mute setting (browser storage).</li>
+      </ul>
+
+      <h2>Where it lives</h2>
+      <p>Data is stored with Supabase (database and sign-in) and the game is served by Vercel. We don't sell data, show ads or use tracking cookies.</p>
+
+      <h2>Sharing</h2>
+      <p>When you tap "Share on Facebook", Facebook receives a link to a public score card showing your nickname and score.</p>
+
+      <h2>Deleting your data</h2>
+      <p>Open a request at <a href="https://github.com/allandanos/gator-gotcha/issues/new?title=Data%20deletion%20request">github.com/allandanos/gator-gotcha/issues</a> with your nickname (or, if connected, the name on your Facebook account) and we'll delete your account and scores within 30 days. If you connected Facebook, you can also remove the app under Facebook Settings → Apps and Websites.</p>
+
+      <p><a href="/">← Back to the swamp</a></p>
+    </main>
+  </body>
+</html>

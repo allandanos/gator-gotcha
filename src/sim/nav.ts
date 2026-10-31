@@ -1,6 +1,7 @@
 import { ARENA, NAV_CELL } from '../config';
 import { circleIntersectsRect } from './geometry';
 import type { NavGrid, Obstacle } from './types';
+import { dhypot } from '../core/dmath';
 import type { Vec } from '../core/vec';
 
 export interface Cell {
@@ -103,7 +104,7 @@ const DIRS8: ReadonlyArray<[number, number]> = [
 
 /** Grid line-of-travel check by sampling at quarter-cell steps. */
 export function gridClear(g: NavGrid, a: Vec, b: Vec): boolean {
-  const d = Math.hypot(b.x - a.x, b.y - a.y);
+  const d = dhypot(b.x - a.x, b.y - a.y);
   const steps = Math.max(1, Math.ceil(d / (g.cell * 0.25)));
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;

@@ -10,7 +10,9 @@ One catch ends the run.
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173
+cp .env.example .env.local   # fill in Supabase values (optional: game works offline without them)
+npm run dev        # game only, http://localhost:5173
+vercel dev         # game + api/ functions (leaderboard submit, share pages), http://localhost:3000
 npm test           # unit tests (add --coverage for the report)
 npm run build      # typecheck + production bundle in dist/
 npm run lint
@@ -47,6 +49,30 @@ vercel deploy --prod
 
 All tuning lives in [`src/config.ts`](src/config.ts).
 
+## Online: leaderboards & sharing
+
+- **Accounts**: an anonymous Supabase session is created the first time a player finishes a run.
+  Players get a random `Duck####` nickname they can change on the game-over card.
+- **Anti-cheat by replay**: the client records one byte of quantized input per sim tick. On game
+  over it posts `{ seed, log }` (run-length encoded) to `POST /api/scores`; the Vercel Function
+  re-runs the deterministic sim server-side and stores the score *it* computes. Logs that don't end
+  in a catch on the final tick, duplicates, and > 10 submissions/min are rejected.
+- **Determinism**: `src/core/dmath.ts` replaces `Math.sin/cos/atan2/hypot` inside the sim (their
+  last-bit results differ across JS engines). A golden replay test pins the behaviour.
+- **Boards**: all-time (best per player) and **Daily Swamp** (seed `dYYYYMMDD`, UTC).
+- **Sharing**: "Share on Facebook" shares `/s/<scoreId>`, which serves Open Graph tags and a
+  generated 1200×630 PNG (`/api/og`, satori + resvg), then sends visitors to the same swamp with a
+  "Beat X's score" banner.
+- **Database**: `supabase/migrations/`. RLS makes profiles/scores publicly readable; only the
+  service role (the replay validator) can write scores; players may update only their own nickname.
+
+### Enabling Facebook Login (later)
+
+1. Create an app at developers.facebook.com → add **Facebook Login** → Valid OAuth Redirect URI:
+   `https://<project-ref>.supabase.co/auth/v1/callback`. Privacy policy URL: `/privacy.html`.
+2. Supabase → Authentication → Providers → Facebook: paste App ID + Secret.
+3. Set `VITE_FB_LOGIN_ENABLED=true` in Vercel env and redeploy.
+
 ## Architecture
 
 ```
@@ -58,7 +84,10 @@ src/
   render/          Canvas 2D: baked background, procedural sprites, effects
   input/           keyboard + touch joystick merged into one InputState
   audio/           WebAudio synth SFX and procedural bluegrass loop (tempo follows the chase)
-  ui/              DOM HUD, overlay screens, guarded localStorage
+  ui/              DOM HUD, overlay screens, guarded localStorage, online UI controller
+  online/          lazy-loaded chunk: supabase-js client, submit/leaderboard, share, FB link
+api/               Vercel Functions: scores (replay validator), share (OG landing), og (PNG card)
+supabase/          config.toml + SQL migrations
 ```
 
 Design choices:

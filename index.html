@@ -48,8 +48,13 @@
             <li><kbd>Esc</kbd> pause · <kbd>M</kbd> mute</li>
             <li class="touch-only">Drag left side to move · tap <b>Dash</b></li>
           </ul>
-          <button id="play-btn" class="btn btn--primary" type="button" data-autofocus>Play</button>
-          <p class="meta">Swamp <code id="title-seed"></code> · Best <b id="title-best">0</b></p>
+          <p id="challenge-banner" class="challenge" hidden></p>
+          <div class="actions">
+            <button id="play-btn" class="btn btn--primary" type="button" data-autofocus>Play</button>
+            <button id="daily-btn" class="btn btn--daily" type="button">Daily Swamp</button>
+          </div>
+          <p class="meta">Swamp <code id="title-seed"></code> · Best <b id="title-best">0</b> · <button id="title-board-btn" class="link-btn" type="button" data-online>Leaderboard</button></p>
+          <p class="meta meta--fine"><a href="/privacy.html">Privacy</a></p>
         </div>
       </section>
 
@@ -73,11 +78,40 @@
             <div><dt>Survived</dt><dd id="over-time">0:00</dd></div>
             <div><dt>Best</dt><dd id="over-best">0</dd></div>
           </dl>
+          <div id="over-online" class="online" data-online hidden>
+            <p id="over-status" class="online-status" role="status" aria-live="polite"></p>
+            <form id="nickname-form" class="nickname" hidden>
+              <label for="nickname-input">Playing as</label>
+              <input id="nickname-input" name="nickname" maxlength="16" autocomplete="nickname" spellcheck="false" />
+              <button class="btn btn--small" type="submit">Save</button>
+              <p id="nickname-error" class="field-error" role="alert"></p>
+            </form>
+            <div class="actions actions--tight">
+              <button id="fb-share-btn" class="btn btn--fb btn--small" type="button" disabled>Share on Facebook</button>
+              <button id="over-board-btn" class="btn btn--small" type="button">Leaderboard</button>
+              <button id="fb-link-btn" class="btn btn--small" type="button" hidden>Connect Facebook</button>
+            </div>
+          </div>
           <div class="actions">
             <button id="retry-btn" class="btn btn--primary" type="button" data-autofocus>Retry this swamp</button>
             <button id="new-btn" class="btn" type="button">New swamp</button>
           </div>
           <p class="meta">Swamp <code id="over-seed"></code> <button id="copy-btn" class="link-btn" type="button">Copy link</button></p>
+        </div>
+      </section>
+
+      <section id="screen-board" class="screen" aria-labelledby="board-heading" hidden>
+        <div class="card card--board">
+          <h2 id="board-heading" class="heading">Top Ducks</h2>
+          <div class="tabs" role="tablist" aria-label="Leaderboard">
+            <button id="tab-all" class="tab" role="tab" type="button" aria-selected="true" aria-controls="board-list">All-time</button>
+            <button id="tab-daily" class="tab" role="tab" type="button" aria-selected="false" aria-controls="board-list">Today</button>
+          </div>
+          <p id="board-status" class="online-status" role="status" aria-live="polite"></p>
+          <ol id="board-list" class="board" role="tabpanel"></ol>
+          <div class="actions">
+            <button id="board-back-btn" class="btn btn--primary" type="button" data-autofocus>Back</button>
+          </div>
         </div>
       </section>
 
