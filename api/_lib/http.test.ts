@@ -53,5 +53,6 @@ describe('share page', () => {
     expect(html).not.toMatch(/http-equiv/i);
     expect(html).toContain('<script src="/share-redirect.js" defer></script>');
     expect(html).toContain('data-target="https://g.example/?seed=abc123');
+    expect(html).toContain('Daily Swamp 2026-10-31: 1 egg in 0:01');
   });
 });
