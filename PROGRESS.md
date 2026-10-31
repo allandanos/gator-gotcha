@@ -2,6 +2,7 @@
 
 | date | phase | status | notes |
 |---|---|---|---|
+| 2026-11-01 | 0 | done | events live |
 
 ## Evidence
 
@@ -64,3 +65,13 @@ the rate-limit count-then-insert is not atomic.
 
 **Staging caveat:** Preview shares the production Supabase project, so staging plays post real scores.
 A separate staging Supabase project would remove this; not in Phase 0 scope.
+
+**Production (`main` fast-forwarded to `16b5889`, deployment `gator-gotcha-7o0ln84h4`, owner-approved)**
+- `curl -X POST https://www.gatorgotcha.com/api/events -d '{}'` → `400`; `/privacy.html` lists the events.
+- Headless run on seed `prodsmoke` with `/api/scores` and Supabase blocked (no account, no score):
+  `title_view`, `run_start`, `run_end` → `202`, `appVersion=16b5889`, session `bf6f3947-cfcc-4cae-b143-aee2419cd1fa`.
+  `scores?seed=eq.prodsmoke` → `[]`.
+- Service-role count query (all events): `{ title_view: 8, run_start: 3, run_end: 3 }`; version
+  `16b5889` alone: `{ title_view: 3, run_start: 1, run_end: 1 }` (real players already arriving).
+- `events_death_histogram` → buckets 30, 100, 270 s (1 run each).
+- KPI gate (7 consecutive days of events) is checked at the start of Phase 1.
