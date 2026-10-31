@@ -1,4 +1,12 @@
-import { hasStoredSession, loadNickname, loadSeed, saveNickname, saveSeed } from './storage';
+import {
+  hasStoredSession,
+  loadNickname,
+  loadSeed,
+  markUpdatingFrom,
+  saveNickname,
+  saveSeed,
+  takeUpdatedFrom,
+} from './storage';
 
 function memoryStorage(initial: Record<string, string> = {}): Storage {
   const data = new Map(Object.entries(initial));
@@ -30,7 +38,9 @@ describe('nickname cache', () => {
   });
 
   it('ignores invalid names on write and on read', () => {
-    vi.stubGlobal('window', { localStorage: memoryStorage({ 'gator-gotcha:nickname': '<script>' }) });
+    vi.stubGlobal('window', {
+      localStorage: memoryStorage({ 'gator-gotcha:nickname': '<script>' }),
+    });
     expect(loadNickname()).toBeNull();
     saveNickname('x');
     expect(loadNickname()).toBeNull();
@@ -52,7 +62,9 @@ describe('seed memory', () => {
 
 describe('hasStoredSession', () => {
   it('detects a persisted supabase session', () => {
-    vi.stubGlobal('window', { localStorage: memoryStorage({ 'sb-ecjoimtngyohebssnxrw-auth-token': '{}' }) });
+    vi.stubGlobal('window', {
+      localStorage: memoryStorage({ 'sb-ecjoimtngyohebssnxrw-auth-token': '{}' }),
+    });
     expect(hasStoredSession()).toBe(true);
   });
 
@@ -70,5 +82,20 @@ describe('unavailable storage', () => {
     expect(loadSeed()).toBeNull();
     expect(loadNickname()).toBeNull();
     expect(hasStoredSession()).toBe(false);
+  });
+});
+
+describe('update marker', () => {
+  it('is read once after an update reload', () => {
+    vi.stubGlobal('window', { localStorage: memoryStorage() });
+    markUpdatingFrom('abc1234');
+    expect(takeUpdatedFrom()).toBe('abc1234');
+    expect(takeUpdatedFrom()).toBeNull();
+  });
+
+  it('is null when storage is unavailable', () => {
+    vi.stubGlobal('window', throwing);
+    markUpdatingFrom('abc1234');
+    expect(takeUpdatedFrom()).toBeNull();
   });
 });

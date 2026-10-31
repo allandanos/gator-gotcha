@@ -19,6 +19,12 @@ export async function currentUserId(): Promise<string | null> {
   return data.session?.user.id ?? null;
 }
 
+/** The current session's access token, or null; never creates an account. */
+export async function currentAccessToken(): Promise<string | null> {
+  const { data } = await supabase().auth.getSession();
+  return data.session?.access_token ?? null;
+}
+
 /** Returns an access token, signing in anonymously on first use. */
 export async function ensureSession(): Promise<{ token: string; userId: string }> {
   const sb = supabase();

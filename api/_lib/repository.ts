@@ -31,6 +31,23 @@ export interface ScoreRepository {
   getShared(id: string): Promise<SharedScore | null>;
 }
 
+export interface NewEvent {
+  readonly sessionId: string;
+  readonly userId: string | null;
+  readonly name: string;
+  readonly props: Readonly<Record<string, string | number | boolean>>;
+  readonly platform: string;
+  readonly appVersion: string;
+  readonly clientTs: string;
+}
+
+/** Write-only access to the analytics events table (clients can never read it). */
+export interface EventRepository {
+  userIdForToken(token: string): Promise<string | null>;
+  countSince(sessionId: string, sinceIso: string): Promise<number>;
+  insertMany(rows: readonly NewEvent[]): Promise<void>;
+}
+
 function requireEnv(name: string): string {
   const v = process.env[name];
   if (!v) throw new Error(`Missing required environment variable ${name}`);
@@ -49,12 +66,14 @@ function adminClient(): SupabaseClient {
 
 const UNIQUE_VIOLATION = '23505';
 
+async function userIdForToken(client: SupabaseClient, token: string): Promise<string | null> {
+  const { data, error } = await client.auth.getUser(token);
+  return error || !data.user ? null : data.user.id;
+}
+
 export function supabaseRepository(client: SupabaseClient = adminClient()): ScoreRepository {
   return {
-    async userIdForToken(token) {
-      const { data, error } = await client.auth.getUser(token);
-      return error || !data.user ? null : data.user.id;
-    },
+    userIdForToken: (token) => userIdForToken(client, token),
     async countSince(userId, sinceIso) {
       const { count, error } = await client
         .from('scores')
@@ -83,7 +102,12 @@ export function supabaseRepository(client: SupabaseClient = adminClient()): Scor
       return { id: data.id as string };
     },
     async rankFor(board, day, userId, score) {
-      const { data, error } = await client.rpc('rank_for', { board, day, player: userId, value: score });
+      const { data, error } = await client.rpc('rank_for', {
+        board,
+        day,
+        player: userId,
+        value: score,
+      });
       if (error) throw new Error(`rankFor: ${error.message}`);
       return Number(data);
     },
@@ -105,6 +129,35 @@ export function supabaseRepository(client: SupabaseClient = adminClient()): Scor
         ticks: data.ticks as number,
         nickname: profile?.nickname ?? 'A duck',
       };
+    },
+  };
+}
+
+export function supabaseEventRepository(client: SupabaseClient = adminClient()): EventRepository {
+  return {
+    userIdForToken: (token) => userIdForToken(client, token),
+    async countSince(sessionId, sinceIso) {
+      const { count, error } = await client
+        .from('events')
+        .select('id', { count: 'exact', head: true })
+        .eq('session_id', sessionId)
+        .gte('created_at', sinceIso);
+      if (error) throw new Error(`countSince(events): ${error.message}`);
+      return count ?? 0;
+    },
+    async insertMany(rows) {
+      const { error } = await client.from('events').insert(
+        rows.map((r) => ({
+          session_id: r.sessionId,
+          user_id: r.userId,
+          name: r.name,
+          props: r.props,
+          platform: r.platform,
+          app_version: r.appVersion,
+          client_ts: r.clientTs,
+        })),
+      );
+      if (error) throw new Error(`insertMany(events): ${error.message}`);
     },
   };
 }

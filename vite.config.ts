@@ -1,10 +1,25 @@
+import { execSync } from 'node:child_process';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 
 const THEME = '#2f9fc4';
 
+/** Build id reported with analytics events: the deployed commit on Vercel, else the local HEAD. */
+function appVersion(): string {
+  const sha = process.env.VERCEL_GIT_COMMIT_SHA;
+  if (sha) return sha.slice(0, 7);
+  try {
+    return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString()
+      .trim();
+  } catch {
+    return 'dev';
+  }
+}
+
 export default defineConfig({
   base: '/',
+  define: { __APP_VERSION__: JSON.stringify(appVersion()) },
   plugins: [
     VitePWA({
       // 'prompt' keeps a downloaded update waiting until src/ui/updates.ts finds a moment that
@@ -26,7 +41,12 @@ export default defineConfig({
         icons: [
           { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
-          { src: '/icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          {
+            src: '/icons/maskable-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
         ],
       },
       workbox: {
@@ -43,7 +63,15 @@ export default defineConfig({
     environment: 'node',
     coverage: {
       provider: 'v8',
-      include: ['src/core/**', 'src/sim/**', 'src/ui/pendingRuns.ts', 'src/ui/bootSeed.ts', 'src/ui/storage.ts', 'api/_lib/**'],
+      include: [
+        'src/core/**',
+        'src/sim/**',
+        'src/ui/pendingRuns.ts',
+        'src/ui/eventQueue.ts',
+        'src/ui/bootSeed.ts',
+        'src/ui/storage.ts',
+        'api/_lib/**',
+      ],
       exclude: ['src/core/loop.ts', '**/*.test.ts', '**/__fixtures__/**', 'api/_lib/repository.ts'],
       thresholds: { lines: 80, functions: 80, branches: 75, statements: 80 },
     },

@@ -17,13 +17,28 @@ import { dailyDateOf, dailySeed, encodeLog } from './sim/replay';
 import { computeScore } from './sim/scoring';
 import type { World } from './sim/types';
 import { createWorld, step } from './sim/world';
+import {
+  flushEvents,
+  setTokenProvider,
+  setupAnalyticsFlush,
+  track,
+  APP_VERSION,
+} from './ui/analytics';
 import { pickBootSeed } from './ui/bootSeed';
 import { $, formatTime, isTypingTarget } from './ui/dom';
 import { Hud } from './ui/hud';
-import { setupInstall } from './ui/install';
+import { isStandalone, setupInstall } from './ui/install';
 import { OnlineUi } from './ui/onlineUi';
 import { fillGameOver, showScreen } from './ui/screens';
-import { loadBest, loadMuted, loadSeed, saveBest, saveMuted, saveSeed } from './ui/storage';
+import {
+  loadBest,
+  loadMuted,
+  loadSeed,
+  saveBest,
+  saveMuted,
+  saveSeed,
+  takeUpdatedFrom,
+} from './ui/storage';
 import { setupUpdates } from './ui/updates';
 
 type Phase = 'title' | 'playing' | 'paused' | 'caught' | 'over';
@@ -41,6 +56,23 @@ function seedUrl(seed: string, keepChallenge = false): string {
 
 const todayIso = (): string => dailyDateOf(dailySeed(new Date())) as string;
 
+/** Referring site's host only (never the full URL); empty for direct visits and in-app reloads. */
+function referrerHost(): string {
+  try {
+    const host = document.referrer ? new URL(document.referrer).hostname : '';
+    return host === window.location.hostname ? '' : host.slice(0, 64);
+  } catch {
+    return '';
+  }
+}
+
+function trackBoot(): void {
+  const updatedFrom = takeUpdatedFrom();
+  if (updatedFrom && updatedFrom !== APP_VERSION)
+    track('update_applied', { from: updatedFrom, to: APP_VERSION });
+  track('title_view', { installed: isStandalone(), referrer: referrerHost() });
+}
+
 function boot(): void {
   const canvas = $<HTMLCanvasElement>('#stage');
   const renderer = new Renderer(canvas);
@@ -52,10 +84,12 @@ function boot(): void {
   const music = new Music(audio);
   const muteBtn = $<HTMLButtonElement>('#mute-btn');
   const online = new OnlineUi(showScreen, todayIso);
+  setTokenProvider(() => online.accessToken());
   const recorder = new InputRecorder();
 
   const params = new URL(window.location.href).searchParams;
-  let seed = pickBootSeed(parseSeed(params.get('seed')), loadSeed(), dailySeed(new Date())) ?? randomSeed();
+  let seed =
+    pickBootSeed(parseSeed(params.get('seed')), loadSeed(), dailySeed(new Date())) ?? randomSeed();
   saveSeed(seed);
   // A shared-score link pins its seed; the challenge banner applies only while playing that seed.
   const challengeSeed = params.get('challenge') ? seed : null;
@@ -98,6 +132,9 @@ function boot(): void {
 
   const startRun = (nextSeed: string) => {
     audio.unlock();
+    const fromOver = phase === 'over';
+    if (fromOver) track('retry');
+    track('run_start', { seed: nextSeed, daily: nextSeed === dailySeed(new Date()), fromOver });
     seed = nextSeed;
     saveSeed(seed);
     world = createWorld(seed);
@@ -140,10 +177,19 @@ function boot(): void {
       best = score;
       saveBest(best);
     }
-    fillGameOver({ score, eggs: world.eggsCollected, time: formatTime(world.time), best, isNewBest, seed });
+    fillGameOver({
+      score,
+      eggs: world.eggsCollected,
+      time: formatTime(world.time),
+      best,
+      isNewBest,
+      seed,
+    });
     hud.show(false);
     showScreen('over');
     void online.onGameOver(seed, encodeLog(recorder.bytes()));
+    track('run_end', { sec: world.time, eggs: world.eggsCollected, score });
+    void flushEvents();
   };
 
   const update = (dt: number) => {
@@ -204,6 +250,7 @@ function boot(): void {
     try {
       await navigator.clipboard.writeText(online.lastShareUrl ?? seedUrl(seed));
       copyBtn.textContent = 'Copied!';
+      track('share', { via: 'copy' });
     } catch {
       copyBtn.textContent = 'Copy failed';
     }
@@ -233,12 +280,19 @@ function boot(): void {
   if (import.meta.env.DEV) {
     // Dev-only hook for browser-driven testing; stripped from production builds.
     Object.assign(window, {
-      __gator: { get: () => world, set: (w: World) => ((prev = w), (world = w)), phase: () => phase },
+      __gator: {
+        get: () => world,
+        set: (w: World) => ((prev = w), (world = w)),
+        phase: () => phase,
+      },
     });
   }
 
   renderer.resize();
   setupInstall();
+  setupAnalyticsFlush();
+  trackBoot();
+  void flushEvents();
 
   void online.flushPending();
   showScreen('title');

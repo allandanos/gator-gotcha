@@ -7,6 +7,7 @@ const KEYS = {
   muted: 'gator-gotcha:muted',
   nickname: 'gator-gotcha:nickname',
   seed: 'gator-gotcha:seed',
+  updatedFrom: 'gator-gotcha:updated-from',
 } as const;
 /** supabase-js persists its session under `sb-<project-ref>-auth-token`. */
 const SESSION_KEY = /^sb-[a-z0-9]+-auth-token$/;
@@ -62,6 +63,23 @@ export function loadSeed(): string | null {
 export function saveSeed(seed: string): void {
   const valid = parseSeed(seed);
   if (valid) write(KEYS.seed, valid);
+}
+
+/** Remember the running build just before reloading into an update. */
+export function markUpdatingFrom(version: string): void {
+  write(KEYS.updatedFrom, version);
+}
+
+/** The build an update reload came from (read once), so the new build can report the update. */
+export function takeUpdatedFrom(): string | null {
+  const from = read(KEYS.updatedFrom);
+  if (from === null) return null;
+  try {
+    window.localStorage.removeItem(KEYS.updatedFrom);
+  } catch {
+    // Storage unavailable: nothing was stored either.
+  }
+  return from;
 }
 
 /** Whether this browser already has an online session, checked without loading supabase-js. */

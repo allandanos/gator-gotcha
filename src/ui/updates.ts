@@ -1,4 +1,6 @@
 import { registerSW } from 'virtual:pwa-register';
+import { APP_VERSION } from './analytics';
+import { markUpdatingFrom } from './storage';
 
 /** How often a long-running (installed, backgrounded) app asks the server for a newer build. */
 const UPDATE_CHECK_MS = 30 * 60 * 1000;
@@ -23,6 +25,8 @@ export function setupUpdates(policy: UpdatePolicy): { maybeApply(): void } {
   const apply = () => {
     if (applying) return;
     applying = true;
+    // The new build reports update_applied on boot; only it knows its own version.
+    markUpdatingFrom(APP_VERSION);
     // A page opened before any service worker existed is never "taken over", so the plugin's
     // reload-on-controllerchange won't fire; the new build is already active, so just reload.
     if (!navigator.serviceWorker.controller) window.location.reload();
@@ -59,6 +63,8 @@ export function setupUpdates(policy: UpdatePolicy): { maybeApply(): void } {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) maybeApply();
   });
-  document.querySelectorAll('[data-update-btn]').forEach((btn) => btn.addEventListener('click', apply));
+  document
+    .querySelectorAll('[data-update-btn]')
+    .forEach((btn) => btn.addEventListener('click', apply));
   return { maybeApply };
 }

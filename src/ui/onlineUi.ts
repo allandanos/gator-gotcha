@@ -1,13 +1,22 @@
 import { SIM_DT } from '../config';
+import { track } from './analytics';
 import { $, formatTime } from './dom';
-import { browserStore, createPendingRuns, flushDecision, type PendingRun, type SubmitStatus } from './pendingRuns';
+import {
+  browserStore,
+  createPendingRuns,
+  flushDecision,
+  type PendingRun,
+  type SubmitStatus,
+} from './pendingRuns';
 import type { ScreenId } from './screens';
 import { hasStoredSession, loadNickname, saveNickname } from './storage';
 
 type OnlineModule = typeof import('../online');
 type Board = 'all' | 'daily';
 
-const ONLINE_CONFIGURED = Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
+const ONLINE_CONFIGURED = Boolean(
+  import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY,
+);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** Stays under the server's 10 submissions/minute rate limit. */
 const FLUSH_BATCH = 8;
@@ -83,6 +92,13 @@ export class OnlineUi {
     return this.lastScoreId ? `${window.location.origin}/s/${this.lastScoreId}` : null;
   }
 
+  /** Access token for analytics, only if the online chunk is already loaded (never loads it). */
+  async accessToken(): Promise<string | null> {
+    if (!this.mod) return null;
+    const online = await this.mod;
+    return online.currentAccessToken();
+  }
+
   private load(): Promise<OnlineModule> {
     this.mod ??= import('../online').catch((err: unknown) => {
       this.mod = null;
@@ -128,7 +144,10 @@ export class OnlineUi {
   private queue(run: PendingRun): void {
     this.pending.enqueue(run);
     this.shareBtn.hidden = true;
-    this.setStatus('Saved offline. It’ll post to the leaderboard when you’re back online.', 'queued');
+    this.setStatus(
+      'Saved offline. It’ll post to the leaderboard when you’re back online.',
+      'queued',
+    );
     this.refreshPendingNote();
   }
 
@@ -225,6 +244,7 @@ export class OnlineUi {
   private async share(): Promise<void> {
     if (!this.lastScoreId) return;
     const online = await this.load();
+    track('share', { via: 'facebook' });
     online.shareToFacebook(this.lastScoreId);
   }
 
@@ -268,7 +288,8 @@ export class OnlineUi {
           : 'No scores yet. Be the first!';
       this.boardList.replaceChildren(...rows.map((r) => boardRow(r, r.userId === me)));
     } catch (err) {
-      const offline = !navigator.onLine || /failed to fetch|network|load failed/i.test(errorText(err));
+      const offline =
+        !navigator.onLine || /failed to fetch|network|load failed/i.test(errorText(err));
       this.boardStatus.textContent = offline
         ? 'You’re offline. Leaderboards need a connection.'
         : `Couldn’t load the leaderboard: ${errorText(err)}`;

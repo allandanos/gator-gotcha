@@ -1,3 +1,4 @@
+import { track } from './analytics';
 import { $ } from './dom';
 
 /** Chrome/Edge/Android's deferred install prompt (not yet in lib.dom). */
@@ -6,7 +7,7 @@ interface BeforeInstallPromptEvent extends Event {
   readonly userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-function isStandalone(): boolean {
+export function isStandalone(): boolean {
   return (
     window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches ||
     (navigator as Navigator & { standalone?: boolean }).standalone === true
@@ -16,7 +17,8 @@ function isStandalone(): boolean {
 /** iOS has no install prompt event, so Safari users get a one-line "Add to Home Screen" hint instead. */
 function isIosSafari(): boolean {
   const ua = navigator.userAgent;
-  const ios = /iPad|iPhone|iPod/.test(ua) || (ua.includes('Macintosh') && navigator.maxTouchPoints > 1);
+  const ios =
+    /iPad|iPhone|iPod/.test(ua) || (ua.includes('Macintosh') && navigator.maxTouchPoints > 1);
   return ios && /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|FBAN|FBAV|Instagram/.test(ua);
 }
 
@@ -41,6 +43,7 @@ export function setupInstall(): void {
     show(button, true);
   });
   window.addEventListener('appinstalled', () => {
+    track('install');
     deferred = null;
     show(button, false);
   });
