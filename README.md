@@ -1,6 +1,6 @@
 # Gator Gotcha
 
-**Play:** https://gator-gotcha-ten.vercel.app
+**Play:** https://www.gatorgotcha.com
 
 Top-down swamp chase. You're a duck grabbing eggs; a sight-hunting alligator is after you.
 Break its line of sight behind logs and reeds, and dash (limited stamina) when spotted.
