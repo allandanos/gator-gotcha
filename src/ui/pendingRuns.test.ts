@@ -11,7 +11,7 @@ function memoryStore(initial: Record<string, string> = {}): KeyValueStore & { da
   };
 }
 
-const run = (n: number) => ({ seed: `s${n}`, log: `log${n}`, finishedAt: 1000 + n });
+const run = (n: number) => ({ seed: `s${n}`, log: `log${n}`, mode: 'classic' as const, finishedAt: 1000 + n });
 
 describe('pending runs queue', () => {
   it('round-trips queued runs in order', () => {
@@ -91,5 +91,23 @@ describe('flushDecision', () => {
     [503, 'keep'],
   ] as const)('status %s → %s', (status, expected) => {
     expect(flushDecision(status)).toBe(expected);
+  });
+});
+
+describe('pending runs and modes', () => {
+  it('reads runs queued before modes existed as classic', () => {
+    const store = memoryStore({ 'gator-gotcha:pending': JSON.stringify([run(1)]) });
+    expect(createPendingRuns(store).peekAll()).toEqual([{ ...run(1), mode: 'classic' }]);
+  });
+
+  it('keeps the same log in two modes as two runs, and drops unknown modes', () => {
+    const q = createPendingRuns(memoryStore());
+    q.enqueue({ ...run(1), mode: 'rush' });
+    q.enqueue({ ...run(1), mode: 'night' });
+    expect(q.peekAll().map((r) => r.mode)).toEqual(['rush', 'night']);
+    q.remove({ ...run(1), mode: 'rush' });
+    expect(q.peekAll().map((r) => r.mode)).toEqual(['night']);
+    const bad = memoryStore({ 'gator-gotcha:pending': JSON.stringify([{ ...run(2), mode: 'campaign' }]) });
+    expect(createPendingRuns(bad).peekAll()).toEqual([]);
   });
 });

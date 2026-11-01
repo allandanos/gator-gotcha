@@ -1,9 +1,10 @@
 import { $ } from './dom';
 
-export type ScreenId = 'title' | 'pause' | 'over' | 'board';
+export type ScreenId = 'title' | 'modes' | 'pause' | 'over' | 'board';
 
 const IDS: Record<ScreenId, string> = {
   title: '#screen-title',
+  modes: '#screen-modes',
   pause: '#screen-pause',
   over: '#screen-over',
   board: '#screen-board',
@@ -26,13 +27,31 @@ export interface GameOverStats {
   readonly best: number;
   readonly isNewBest: boolean;
   readonly seed: string;
+  /** "CHOMP!" for a catch; other endings bring their own headline. */
+  readonly heading: string;
+  /** Tone of the headline: a catch is red, a good ending is sunny. */
+  readonly tone: 'chomp' | 'win';
+  /** Optional line under the headline ("+500 clutch bonus"). */
+  readonly sub: string;
+  /** Mode name shown next to the seed; empty for classic. */
+  readonly modeLabel: string;
 }
 
 export function fillGameOver(s: GameOverStats): void {
+  const heading = $('#over-heading');
+  heading.textContent = s.heading;
+  heading.classList.toggle('heading--chomp', s.tone === 'chomp');
+  heading.classList.toggle('heading--win', s.tone === 'win');
+  const sub = $('#over-sub');
+  sub.textContent = s.sub;
+  sub.hidden = !s.sub;
   $('#over-score').textContent = String(s.score);
   $('#over-eggs').textContent = String(s.eggs);
   $('#over-time').textContent = s.time;
   $('#over-best').textContent = String(s.best);
   $('#over-newbest').hidden = !s.isNewBest;
   $('#over-seed').textContent = s.seed;
+  const mode = $('#over-mode');
+  mode.textContent = s.modeLabel;
+  mode.hidden = !s.modeLabel;
 }

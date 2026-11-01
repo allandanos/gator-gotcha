@@ -18,7 +18,8 @@ npm run build      # typecheck + production bundle in dist/
 npm run lint
 ```
 
-`?seed=abc123` in the URL replays a specific swamp layout (1–12 lowercase letters/digits).
+`?seed=abc123` in the URL replays a specific swamp layout (1–12 lowercase letters/digits);
+add `&mode=rush` or `&mode=night` for another mode.
 
 ## Deploy
 
@@ -45,7 +46,20 @@ vercel deploy --prod
 - Picking up an egg makes a splash the gator can hear within 450 u.
 - Difficulty rises with time and eggs: gator speed 150 → 270 (always below your 300 dash), cone
   range 260 → 480, cone angle 70° → 110°.
-- Score = eggs × 100 + seconds survived × 10. Best score is stored in localStorage.
+- Score = eggs × 100 + seconds survived × 10. Best score is stored in localStorage, per mode.
+
+### Modes
+
+Pick one from **Modes** on the title screen; **Play** starts the last mode you picked. Each ranked
+mode is replayed by the server and has its own leaderboard. The Daily Swamp is always Classic.
+
+| Mode | Rules | Score |
+|---|---|---|
+| Classic | the endless chase above | eggs × 100 + seconds × 10 |
+| Egg Rush | 90 s clock, 8 eggs on the field, gator starts at 20 % difficulty | eggs × 100, +500 if you're still alive at 0:00 |
+| Night Swamp | lantern light only; gator sight × 0.65, hearing × 1.5 | as Classic |
+
+Modes are `RunRules` values (`src/sim/rules.ts`); `?mode=rush|night` in the URL picks one.
 
 All tuning lives in [`src/config.ts`](src/config.ts).
 

@@ -1,4 +1,5 @@
 import { SIM_DT } from '../config';
+import { MODE_IDS, MODE_LABELS, type ModeId } from '../sim/rules';
 import { track } from './analytics';
 import { $, formatTime } from './dom';
 import {
@@ -41,6 +42,7 @@ export class OnlineUi {
   private mod: Promise<OnlineModule> | null = null;
   private lastScoreId: string | null = null;
   private tab: Board = 'all';
+  private boardMode: ModeId = 'classic';
   private backTo: ScreenId = 'title';
   private submitToken = 0;
   private flushing = false;
@@ -60,6 +62,7 @@ export class OnlineUi {
   private readonly boardStatus = $('#board-status');
   private readonly tabAll = $<HTMLButtonElement>('#tab-all');
   private readonly tabDaily = $<HTMLButtonElement>('#tab-daily');
+  private readonly modeBtns = [...document.querySelectorAll<HTMLButtonElement>('[data-board-mode]')];
 
   constructor(
     private readonly show: (id: ScreenId) => void,
@@ -77,6 +80,13 @@ export class OnlineUi {
     });
     this.tabAll.addEventListener('click', () => void this.renderBoard('all'));
     this.tabDaily.addEventListener('click', () => void this.renderBoard('daily'));
+    for (const btn of this.modeBtns) {
+      btn.addEventListener('click', () => {
+        const mode = MODE_IDS.find((m) => m === btn.dataset.boardMode) ?? 'classic';
+        this.boardMode = mode;
+        void this.renderBoard(mode === 'classic' ? this.tab : 'all');
+      });
+    }
     window.addEventListener('online', () => void this.flushPending());
     this.refreshPendingNote();
     this.showPlayer(loadNickname());
@@ -108,10 +118,10 @@ export class OnlineUi {
   }
 
   /** Submit a finished run and show the verified rank; offline runs are queued for later. */
-  async onGameOver(seed: string, encodedLog: string): Promise<void> {
+  async onGameOver(seed: string, encodedLog: string, mode: ModeId): Promise<void> {
     if (!ONLINE_CONFIGURED) return;
     const token = ++this.submitToken;
-    const run: PendingRun = { seed, log: encodedLog, finishedAt: Date.now() };
+    const run: PendingRun = { seed, log: encodedLog, mode, finishedAt: Date.now() };
     this.lastScoreId = null;
     this.panel.hidden = false;
     this.shareBtn.disabled = true;
@@ -125,12 +135,13 @@ export class OnlineUi {
     this.setStatus('Checking your run with the swamp judges…', 'pending');
     try {
       const online = await this.load();
-      const result = await online.submitRun(seed, encodedLog);
+      const result = await online.submitRun(seed, encodedLog, mode);
       if (token !== this.submitToken) return;
       this.lastScoreId = result.id;
       this.shareBtn.disabled = false;
       const daily = result.dailyRank ? ` · #${result.dailyRank} today` : '';
-      this.setStatus(`Verified! #${result.rank} all-time${daily}`, 'ok');
+      const board = mode === 'classic' ? 'all-time' : `in ${MODE_LABELS[mode]}`;
+      this.setStatus(`Verified! #${result.rank} ${board}${daily}`, 'ok');
       this.fbLinkBtn.hidden = !online.isFacebookEnabled();
       await this.showNickname(online);
       void this.flushPending();
@@ -163,7 +174,7 @@ export class OnlineUi {
       for (const run of runs) {
         let status: SubmitStatus = 201;
         try {
-          await online.submitRun(run.seed, run.log);
+          await online.submitRun(run.seed, run.log, run.mode);
         } catch (err) {
           status = statusOf(err);
         }
@@ -257,9 +268,12 @@ export class OnlineUi {
     }
   }
 
-  async openBoard(from: ScreenId): Promise<void> {
+  /** Opens on the given mode's board; the player can switch modes from there. */
+  async openBoard(from: ScreenId, mode: ModeId): Promise<void> {
     if (!ONLINE_CONFIGURED) return;
     this.backTo = from;
+    this.boardMode = mode;
+    if (mode !== 'classic') this.tab = 'all';
     this.show('board');
     await this.renderBoard(this.tab);
   }
@@ -269,18 +283,22 @@ export class OnlineUi {
   }
 
   private async renderBoard(tab: Board): Promise<void> {
+    const mode = this.boardMode;
     this.tab = tab;
     this.tabAll.setAttribute('aria-selected', String(tab === 'all'));
     this.tabDaily.setAttribute('aria-selected', String(tab === 'daily'));
+    // The Daily Swamp is classic-only, so "Today" exists only on the classic board.
+    this.tabDaily.hidden = mode !== 'classic';
+    for (const btn of this.modeBtns) btn.setAttribute('aria-pressed', String(btn.dataset.boardMode === mode));
     this.boardList.replaceChildren();
     this.boardStatus.textContent = 'Loading…';
     try {
       const online = await this.load();
       const [rows, me] = await Promise.all([
-        online.fetchBoard(tab, tab === 'daily' ? this.todayIso() : null),
+        online.fetchBoard(tab, tab === 'daily' ? this.todayIso() : null, mode),
         online.currentUserId(),
       ]);
-      if (this.tab !== tab) return;
+      if (this.tab !== tab || this.boardMode !== mode) return;
       this.boardStatus.textContent = rows.length
         ? ''
         : tab === 'daily'
@@ -297,14 +315,15 @@ export class OnlineUi {
   }
 
   /** Show "Beat X's score" on the title screen when arriving from a shared link. */
-  async showChallenge(id: string | null, seed: string): Promise<void> {
+  async showChallenge(id: string | null, seed: string, mode: ModeId): Promise<void> {
     if (!ONLINE_CONFIGURED || !id || !UUID.test(id)) return;
     try {
       const online = await this.load();
       const c = await online.fetchChallenge(id);
-      if (!c || c.seed !== seed) return;
+      if (!c || c.seed !== seed || c.mode !== mode) return;
       const banner = $('#challenge-banner');
-      banner.textContent = `Beat ${c.nickname}’s ${c.score.toLocaleString()} on this swamp!`;
+      const where = mode === 'classic' ? 'on this swamp' : `in ${MODE_LABELS[mode]} on this swamp`;
+      banner.textContent = `Beat ${c.nickname}’s ${c.score.toLocaleString()} ${where}!`;
       banner.hidden = false;
     } catch {
       // A missing challenge just means no banner.

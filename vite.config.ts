@@ -72,6 +72,7 @@ export default defineConfig({
         'src/ui/eventQueue.ts',
         'src/ui/bootSeed.ts',
         'src/ui/storage.ts',
+        'src/ui/runEnd.ts',
         'src/ui/installPolicy.ts',
         'api/_lib/**',
       ],

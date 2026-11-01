@@ -8,6 +8,8 @@ const STATUS: Record<GatorMode, string> = {
   search: 'Sniffing…',
   chase: 'Spotted!',
 };
+/** Seconds left at which a countdown turns urgent. */
+const COUNTDOWN_WARN = 10;
 
 /** DOM heads-up display. Writes only when values change to avoid layout churn. */
 export class Hud {
@@ -15,19 +17,40 @@ export class Hud {
   private readonly score = $('#hud-score');
   private readonly eggs = $('#hud-eggs');
   private readonly time = $('#hud-time');
+  private readonly timeChip = $('#hud-time-chip');
+  private readonly timeLabel = $('#hud-time-label');
   private readonly stamina = $('#hud-stamina');
   private readonly staminaFill = $('#hud-stamina-fill');
   private readonly status = $('#hud-status');
-  private last = { score: '', eggs: '', time: '', mode: '', stamina: -1, exhausted: false };
+  private last = {
+    score: '',
+    eggs: '',
+    time: '',
+    mode: '',
+    stamina: -1,
+    exhausted: false,
+    warn: false,
+  };
 
   show(visible: boolean): void {
     this.root.hidden = !visible;
   }
 
+  /** Call at run start: timed runs show a countdown instead of elapsed time. */
+  reset(w: World): void {
+    this.timeLabel.textContent = w.rules.timeLimit === null ? 'Time' : 'Left';
+    this.timeChip.classList.remove('chip--warn');
+    this.last = { ...this.last, time: '', warn: false };
+  }
+
   update(w: World): void {
     const score = String(scoreOf(w));
     const eggs = String(w.eggsCollected);
-    const time = formatTime(w.time);
+    const left = w.rules.timeLimit === null ? null : Math.max(0, w.rules.timeLimit - w.time);
+    // Round the countdown up so it reads 0:00 only when the buzzer actually goes.
+    const time = left === null ? formatTime(w.time) : formatTime(Math.ceil(left));
+    const warn = left !== null && left <= COUNTDOWN_WARN;
+    if (warn !== this.last.warn) this.timeChip.classList.toggle('chip--warn', warn);
     const stamina = Math.round((w.duck.stamina / DUCK.staminaMax) * 100) / 100;
     if (score !== this.last.score) this.score.textContent = score;
     if (eggs !== this.last.eggs) this.eggs.textContent = eggs;
@@ -42,6 +65,14 @@ export class Hud {
       this.status.textContent = STATUS[w.gator.mode];
       this.status.dataset.mode = w.gator.mode;
     }
-    this.last = { score, eggs, time, mode: w.gator.mode, stamina, exhausted: w.duck.exhausted };
+    this.last = {
+      score,
+      eggs,
+      time,
+      mode: w.gator.mode,
+      stamina,
+      exhausted: w.duck.exhausted,
+      warn,
+    };
   }
 }

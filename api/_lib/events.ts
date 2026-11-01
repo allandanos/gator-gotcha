@@ -28,6 +28,9 @@ const oneOf =
 
 const installKind = oneOf('prompt', 'ios', 'ios_in_app', 'android_in_app');
 const installWhere = oneOf('title', 'over');
+const mode = oneOf('classic', 'rush', 'night', 'campaign');
+/** Campaign level number (1-based); absent outside the campaign. */
+const level = num(1, 12, true);
 
 /** eggs × 100 + 1200 s × 10, the most a 20-minute run can score. */
 const MAX_SCORE = 10_000 * 100 + 1200 * 10;
@@ -35,8 +38,21 @@ const MAX_SCORE = 10_000 * 100 + 1200 * 10;
 /** Every event the client may send, with the props it may carry. Anything else is dropped. */
 const CATALOGUE: Readonly<Record<string, Readonly<Record<string, PropNormalizer>>>> = {
   title_view: { installed: bool, referrer: str(64) },
-  run_start: { seed: str(12), daily: bool, fromOver: bool },
-  run_end: { sec: num(0, 1200, false), eggs: num(0, 10_000, true), score: num(0, MAX_SCORE, true) },
+  run_start: { seed: str(12), daily: bool, fromOver: bool, mode, level },
+  run_end: {
+    sec: num(0, 1200, false),
+    eggs: num(0, 10_000, true),
+    score: num(0, MAX_SCORE, true),
+    mode,
+    level,
+  },
+  mode_select: { mode },
+  level_end: {
+    level,
+    cleared: bool,
+    stars: num(0, 3, true),
+    outcome: oneOf('cleared', 'caught', 'timeUp'),
+  },
   retry: {},
   share: { via: oneOf('facebook', 'copy') },
   install: {},

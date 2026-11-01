@@ -1,5 +1,6 @@
 import { NICKNAME_PATTERN } from '../core/nickname';
 import { parseSeed } from '../core/rng';
+import { parseMode, type ModeId } from '../sim/rules';
 
 /** localStorage can be unavailable (private mode, blocked storage); every access is guarded. */
 const KEYS = {
@@ -10,6 +11,7 @@ const KEYS = {
   updatedFrom: 'gator-gotcha:updated-from',
   runs: 'gator-gotcha:runs',
   installDismissed: 'gator-gotcha:install-dismissed',
+  mode: 'gator-gotcha:mode',
 } as const;
 /** supabase-js persists its session under `sb-<project-ref>-auth-token`. */
 const SESSION_KEY = /^sb-[a-z0-9]+-auth-token$/;
@@ -30,13 +32,25 @@ function write(key: string, value: string): void {
   }
 }
 
-export function loadBest(): number {
-  const n = Number.parseInt(read(KEYS.best) ?? '0', 10);
+/** Classic keeps the original key so existing bests carry over. */
+const bestKey = (mode: ModeId): string => (mode === 'classic' ? KEYS.best : `${KEYS.best}:${mode}`);
+
+export function loadBest(mode: ModeId): number {
+  const n = Number.parseInt(read(bestKey(mode)) ?? '0', 10);
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
-export function saveBest(score: number): void {
-  write(KEYS.best, String(Math.floor(score)));
+export function saveBest(mode: ModeId, score: number): void {
+  write(bestKey(mode), String(Math.floor(score)));
+}
+
+/** The ranked mode "Play" starts; classic until the player picks another. */
+export function loadMode(): ModeId {
+  return parseMode(read(KEYS.mode)) ?? 'classic';
+}
+
+export function saveMode(mode: ModeId): void {
+  write(KEYS.mode, mode);
 }
 
 export function loadMuted(): boolean {

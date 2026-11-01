@@ -6,6 +6,7 @@ import { visibleConePolygon } from '../sim/sight';
 import type { Gator, GameMap, World } from '../sim/types';
 import type { Effects } from './effects';
 import { PALETTE as P } from './palette';
+import { coneHinted, drawGatorEyes, drawNightFog } from './night';
 import { drawAlertIcon, drawDuck, drawEgg, drawGator, drawGrassDetail, drawLog, drawReeds } from './sprites';
 
 /** Decorative water ring drawn around the arena. */
@@ -117,15 +118,29 @@ export class Renderer {
       drawGator(ctx, gator, t, jaw);
       drawDuck(ctx, duck, t, caught);
     }
+    if (cur.rules.night) this.drawNight(gator, duck.pos, cur, t);
     if (gator.mode !== 'wander') {
       drawAlertIcon(ctx, gator.pos.x, gator.pos.y - 46, gator.mode === 'chase' ? '!' : '?', fx.alertPop);
     }
     fx.draw(ctx);
   }
 
+  /** Fog over the swamp; the gator's eyes, and its cone when near, stay readable on top. */
+  private drawNight(gator: Gator, duck: Vec, w: World, t: number): void {
+    const { ctx } = this;
+    drawNightFog(ctx, duck, t);
+    if (coneHinted(gator, duck)) {
+      ctx.save();
+      ctx.globalAlpha = 0.45;
+      this.drawCone(gator, w);
+      ctx.restore();
+    }
+    drawGatorEyes(ctx, gator, t);
+  }
+
   private drawCone(gator: Gator, w: World): void {
     if (gator.grace > 0) return;
-    const stats = gatorStats(w.time, w.eggsCollected);
+    const stats = gatorStats(w.time, w.eggsCollected, w.rules);
     const poly = visibleConePolygon(
       { origin: gator.pos, heading: gator.heading, range: stats.coneRange, angle: stats.coneAngle },
       w.map.obstacles,

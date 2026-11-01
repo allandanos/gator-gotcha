@@ -14,7 +14,9 @@ export type EventName =
   | 'install'
   | 'install_prompt_shown'
   | 'install_prompt_outcome'
-  | 'update_applied';
+  | 'update_applied'
+  | 'mode_select'
+  | 'level_end';
 type TokenProvider = () => Promise<string | null>;
 
 const ENDPOINT = '/api/events';

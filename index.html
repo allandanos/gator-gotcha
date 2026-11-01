@@ -31,7 +31,7 @@
         <dl class="hud-stats">
           <div class="chip chip--score"><dt>Score</dt><dd id="hud-score">0</dd></div>
           <div class="chip"><dt>Eggs</dt><dd id="hud-eggs">0</dd></div>
-          <div class="chip"><dt>Time</dt><dd id="hud-time">0:00</dd></div>
+          <div id="hud-time-chip" class="chip"><dt id="hud-time-label">Time</dt><dd id="hud-time">0:00</dd></div>
         </dl>
         <div class="hud-right">
           <p id="hud-status" class="status" data-mode="wander" aria-live="polite">Hidden</p>
@@ -65,14 +65,51 @@
             </ul>
             <p id="challenge-banner" class="challenge" hidden></p>
             <div class="actions">
-              <button id="play-btn" class="btn btn--primary" type="button" data-autofocus>Play</button>
+              <button id="play-btn" class="btn btn--primary" type="button" data-autofocus>Play<span id="play-mode" class="btn-tag" hidden></span></button>
               <button id="daily-btn" class="btn btn--daily" type="button">Daily Swamp</button>
+              <button id="modes-btn" class="btn" type="button">Modes</button>
             </div>
             <p class="meta">Swamp <code id="title-seed"></code> · Best <b id="title-best">0</b> · <button id="title-board-btn" class="link-btn" type="button" data-online>Leaderboard</button></p>
             <p id="title-player" class="meta meta--fine" data-online hidden>Playing as <b id="title-player-name"></b></p>
             <p id="pending-note" class="meta meta--fine" data-online hidden></p>
             <p class="meta meta--fine update-note" data-update-note hidden>New version ready · <button class="link-btn" type="button" data-update-btn>Update now</button></p>
             <p class="meta meta--fine"><button id="install-btn" class="link-btn" type="button" hidden>Install app</button><span id="install-hint" hidden>Install: tap Share → Add to Home Screen</span><span id="install-sep" hidden> · </span><a href="/privacy.html">Privacy</a></p>
+          </div>
+        </div>
+      </section>
+
+      <section id="screen-modes" class="screen" aria-labelledby="modes-heading" hidden>
+        <div class="card card--modes">
+          <p class="eyebrow">Same swamp, new rules</p>
+          <h2 id="modes-heading" class="heading">Pick a mode</h2>
+          <ul class="mode-list">
+              <li>
+                <button class="mode-card mode-card--classic" type="button" data-mode="classic">
+                  <span class="mode-card__icon"><svg viewBox="0 0 32 32" aria-hidden="true"><ellipse cx="16" cy="18" rx="9" ry="11" fill="#fffdf5" stroke="currentColor" stroke-width="3"/></svg></span>
+                  <span class="mode-card__name">Classic</span>
+                  <span class="mode-card__rule">Endless chase. Every egg and every second scores.</span>
+                  <span class="mode-card__best">Best <b data-mode-best="classic">0</b></span>
+                </button>
+              </li>
+              <li>
+                <button class="mode-card mode-card--rush" type="button" data-mode="rush">
+                  <span class="mode-card__icon"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="18" r="11" fill="#ffd84d" stroke="currentColor" stroke-width="3"/><path d="M16 11v7l5 3M13 3h6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></span>
+                  <span class="mode-card__name">Egg Rush</span>
+                  <span class="mode-card__rule">90 seconds, eggs everywhere. Last to the buzzer for +500.</span>
+                  <span class="mode-card__best">Best <b data-mode-best="rush">0</b></span>
+                </button>
+              </li>
+              <li>
+                <button class="mode-card mode-card--night" type="button" data-mode="night">
+                  <span class="mode-card__icon"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M21 4a12 12 0 1 0 7 17A10 10 0 0 1 21 4Z" fill="#ffd84d" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg></span>
+                  <span class="mode-card__name">Night Swamp</span>
+                  <span class="mode-card__rule">Lantern light only. The gator sees less but hears more.</span>
+                  <span class="mode-card__best">Best <b data-mode-best="night">0</b></span>
+                </button>
+              </li>
+          </ul>
+          <div class="actions">
+            <button id="modes-back-btn" class="btn" type="button">Back</button>
           </div>
         </div>
       </section>
@@ -91,6 +128,7 @@
         <div class="card card--over">
           <div class="card-col">
             <h2 id="over-heading" class="heading heading--chomp">CHOMP!</h2>
+            <p id="over-sub" class="over-sub" hidden></p>
             <p id="over-newbest" class="badge" hidden>New best!</p>
             <p class="big-score"><span id="over-score">0</span><small>points</small></p>
             <dl class="over-stats">
@@ -133,7 +171,7 @@
                 <button id="install-card-dismiss" class="link-btn install-card__dismiss" type="button">Not now</button>
               </div>
             </aside>
-            <p class="meta">Swamp <code id="over-seed"></code> <button id="copy-btn" class="link-btn" type="button">Copy link</button></p>
+            <p class="meta"><span id="over-mode" class="mode-pill" hidden></span>Swamp <code id="over-seed"></code> <button id="copy-btn" class="link-btn" type="button">Copy link</button></p>
             <p class="meta meta--fine update-note" data-update-note hidden>New version ready · <button class="link-btn" type="button" data-update-btn>Update now</button></p>
           </div>
         </div>
@@ -142,6 +180,11 @@
       <section id="screen-board" class="screen" aria-labelledby="board-heading" hidden>
         <div class="card card--board">
           <h2 id="board-heading" class="heading">Top Ducks</h2>
+          <div class="mode-switch" role="group" aria-label="Leaderboard mode">
+            <button class="mode-switch__btn" type="button" data-board-mode="classic" aria-pressed="true">Classic</button>
+            <button class="mode-switch__btn" type="button" data-board-mode="rush" aria-pressed="false">Egg Rush</button>
+            <button class="mode-switch__btn" type="button" data-board-mode="night" aria-pressed="false">Night</button>
+          </div>
           <div class="tabs" role="tablist" aria-label="Leaderboard">
             <button id="tab-all" class="tab" role="tab" type="button" aria-selected="true" aria-controls="board-list">All-time</button>
             <button id="tab-daily" class="tab" role="tab" type="button" aria-selected="false" aria-controls="board-list">Today</button>

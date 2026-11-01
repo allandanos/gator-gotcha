@@ -45,10 +45,11 @@ rule is in the deterministic sim and replayed by the server.
 | Coverage scope | `src/core/**`, `src/sim/**`, `src/ui/{pendingRuns,bootSeed,storage}.ts`, `api/_lib/**` | `grep -n "include:" vite.config.ts` |
 | Hosting | Vercel, account `allandanos`; push to `main` auto-deploys | `vercel ls` |
 | Backend | Supabase project ref `ecjoimtngyohebssnxrw` + Vercel Functions in `api/` | `cat supabase/config.toml` |
-| Only migration | `supabase/migrations/20261031000000_leaderboard.sql` | `ls supabase/migrations` |
+| Migrations | `20261031000000_leaderboard.sql`, `20261101000000_events.sql`, `20261102000000_modes.sql` (adds `scores.mode`, per-mode `leaderboard`/`rank_for`) | `ls supabase/migrations` |
 | Validation lib | zod 4 (`api/_lib/submitScore.ts` `BodySchema`) | `grep -n zod package.json` |
 | Sim rate | fixed 60 Hz (`SIM_DT = 1/60` in `src/config.ts`) | `grep -n SIM_DT src/config.ts` |
-| Score formula | `eggs × 100 + floor(seconds) × 10` (`src/sim/scoring.ts`) | `cat src/sim/scoring.ts` |
+| Score formula | Classic/Night `eggs × 100 + floor(seconds) × 10`; Rush `eggs × 100` + 500 if the clock runs out (`scoreOf` in `src/sim/scoring.ts`) | `cat src/sim/scoring.ts` |
+| Modes | ranked `classic` / `rush` / `night` (`RunRules`, `src/sim/rules.ts`); submit body `mode` (default classic); boards per mode; daily board classic-only | `grep -n MODE_IDS src/sim/rules.ts` |
 | Replay bound | 20 min (`MAX_REPLAY_TICKS`), encoded log ≤ 64 KB (`MAX_ENCODED_LOG`) | `grep -n MAX_ src/sim/replay.ts` |
 | Submit rate limit | 10 per user per minute (`RATE_LIMIT_PER_MINUTE`) | `grep -n RATE_LIMIT api/_lib/submitScore.ts` |
 | Submit rejections | 400 bad body/seed/log, 401 no session, 409 duplicate, 413 too big, 422 replay fail, 429 rate | `api/_lib/submitScore.ts`, `api/scores.ts` |
@@ -75,7 +76,8 @@ curl -s "$VITE_SUPABASE_URL/rest/v1/scores?select=user_id,eggs,ticks,created_at&
 | Concern | Path | Reuse |
 |---|---|---|
 | Tuning constants | `src/config.ts` | all new gameplay numbers go here |
-| Sim step | `src/sim/world.ts` (`createWorld`, `step`, `isCaught`) | extend; keep pure and immutable |
+| Sim step | `src/sim/world.ts` (`createWorld(seed, rules)`, `step`, `isCaught`) | extend; keep pure and immutable |
+| Run rules / modes | `src/sim/rules.ts` (`RunRules`, `rulesForMode`, `parseMode`) | a new mode or level is a `RunRules` value |
 | Sim types / events | `src/sim/types.ts` (`World`, `GameEvent`) | add fields and event kinds here |
 | Gator AI | `src/sim/gator.ts` (`updateGator`, `snoutOf`) | |
 | Sight | `src/sim/sight.ts` | Phase 2 tail-visibility check |

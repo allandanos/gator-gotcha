@@ -1,7 +1,14 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { parseSeed } from '../../src/core/rng.js';
-import { MAX_ENCODED_LOG, dailyDateOf, dailySeed, decodeLog, replayRun } from '../../src/sim/replay.js';
+import { MODE_IDS, type ModeId } from '../../src/sim/rules.js';
+import {
+  MAX_ENCODED_LOG,
+  dailyDateOf,
+  dailySeed,
+  decodeLog,
+  replayRun,
+} from '../../src/sim/replay.js';
 import type { ScoreRepository } from './repository.js';
 
 export const RATE_LIMIT_PER_MINUTE = 10;
@@ -10,10 +17,13 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const BodySchema = z.object({
   seed: z.string().max(12),
   log: z.string().min(1).max(MAX_ENCODED_LOG),
+  // Absent for older clients and runs queued before modes existed: those are classic.
+  mode: z.enum(MODE_IDS).default('classic'),
 });
 
 export interface SubmitResult {
   readonly id: string;
+  readonly mode: ModeId;
   readonly score: number;
   readonly eggs: number;
   readonly ticks: number;
@@ -58,17 +68,24 @@ export async function submitScore(
     return reject(429, 'Too many submissions, slow down');
   }
 
-  const replay = replayRun(seed, inputs);
+  const mode = parsed.data.mode;
+  const replay = replayRun(seed, inputs, mode);
   if (!replay.ok) return reject(422, `Run could not be verified (${replay.reason})`);
 
-  // Only today's (or, for runs crossing midnight, yesterday's) daily seed counts on the daily board.
-  const isCurrentDaily = seed === dailySeed(now) || seed === dailySeed(new Date(now.getTime() - DAY_MS));
+  // Only classic runs on today's (or, for runs crossing midnight, yesterday's) daily seed count on the daily board.
+  const isCurrentDaily =
+    mode === 'classic' &&
+    (seed === dailySeed(now) || seed === dailySeed(new Date(now.getTime() - DAY_MS)));
   const dailyDate = isCurrentDaily ? dailyDateOf(seed) : null;
 
-  const inputHash = createHash('sha256').update(`${seed}:${parsed.data.log}`).digest('hex');
+  // Classic keeps its original hash so runs queued before modes existed still dedupe.
+  const hashInput =
+    mode === 'classic' ? `${seed}:${parsed.data.log}` : `${mode}:${seed}:${parsed.data.log}`;
+  const inputHash = createHash('sha256').update(hashInput).digest('hex');
   const inserted = await repo.insert({
     userId,
     seed,
+    mode,
     dailyDate,
     score: replay.score,
     eggs: replay.eggs,
@@ -78,11 +95,21 @@ export async function submitScore(
   if (inserted === 'duplicate') return reject(409, 'This run was already submitted');
 
   const [rank, dailyRank] = await Promise.all([
-    repo.rankFor('all', null, userId, replay.score),
-    dailyDate ? repo.rankFor('daily', dailyDate, userId, replay.score) : Promise.resolve(null),
+    repo.rankFor('all', null, mode, userId, replay.score),
+    dailyDate
+      ? repo.rankFor('daily', dailyDate, mode, userId, replay.score)
+      : Promise.resolve(null),
   ]);
   return {
     ok: true,
-    result: { id: inserted.id, score: replay.score, eggs: replay.eggs, ticks: replay.ticks, rank, dailyRank },
+    result: {
+      id: inserted.id,
+      mode,
+      score: replay.score,
+      eggs: replay.eggs,
+      ticks: replay.ticks,
+      rank,
+      dailyRank,
+    },
   };
 }

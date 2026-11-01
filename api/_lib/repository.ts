@@ -1,10 +1,12 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { parseMode, type ModeId } from '../../src/sim/rules.js';
 
 export type Board = 'all' | 'daily';
 
 export interface NewScore {
   readonly userId: string;
   readonly seed: string;
+  readonly mode: ModeId;
   readonly dailyDate: string | null;
   readonly score: number;
   readonly eggs: number;
@@ -15,6 +17,7 @@ export interface NewScore {
 export interface SharedScore {
   readonly id: string;
   readonly seed: string;
+  readonly mode: ModeId;
   readonly dailyDate: string | null;
   readonly score: number;
   readonly eggs: number;
@@ -27,7 +30,7 @@ export interface ScoreRepository {
   userIdForToken(token: string): Promise<string | null>;
   countSince(userId: string, sinceIso: string): Promise<number>;
   insert(row: NewScore): Promise<{ id: string } | 'duplicate'>;
-  rankFor(board: Board, day: string | null, userId: string, score: number): Promise<number>;
+  rankFor(board: Board, day: string | null, mode: ModeId, userId: string, score: number): Promise<number>;
   getShared(id: string): Promise<SharedScore | null>;
 }
 
@@ -89,6 +92,7 @@ export function supabaseRepository(client: SupabaseClient = adminClient()): Scor
         .insert({
           user_id: row.userId,
           seed: row.seed,
+          mode: row.mode,
           daily_date: row.dailyDate,
           score: row.score,
           eggs: row.eggs,
@@ -101,10 +105,11 @@ export function supabaseRepository(client: SupabaseClient = adminClient()): Scor
       if (error || !data) throw new Error(`insert: ${error?.message ?? 'no row'}`);
       return { id: data.id as string };
     },
-    async rankFor(board, day, userId, score) {
+    async rankFor(board, day, mode, userId, score) {
       const { data, error } = await client.rpc('rank_for', {
         board,
         day,
+        mode,
         player: userId,
         value: score,
       });
@@ -114,7 +119,7 @@ export function supabaseRepository(client: SupabaseClient = adminClient()): Scor
     async getShared(id) {
       const { data, error } = await client
         .from('scores')
-        .select('id, seed, daily_date, score, eggs, ticks, profiles(nickname)')
+        .select('id, seed, mode, daily_date, score, eggs, ticks, profiles(nickname)')
         .eq('id', id)
         .maybeSingle();
       if (error) throw new Error(`getShared: ${error.message}`);
@@ -123,6 +128,7 @@ export function supabaseRepository(client: SupabaseClient = adminClient()): Scor
       return {
         id: data.id as string,
         seed: data.seed as string,
+        mode: parseMode(data.mode) ?? 'classic',
         dailyDate: (data.daily_date as string | null) ?? null,
         score: data.score as number,
         eggs: data.eggs as number,

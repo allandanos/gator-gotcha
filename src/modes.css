@@ -1,0 +1,237 @@
+/* ---------- Game modes: picker, play tag, board switch, end card ---------- */
+:root {
+  --night: #16224a;
+  --night-glow: #ffe35a;
+  --rush: #ff8a3d;
+}
+
+/* "Play · Egg Rush" tag inside the primary button. */
+.btn-tag {
+  margin-left: 10px;
+  padding: 2px 10px 3px;
+  font: 800 var(--text-sm) var(--font-body);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-chip);
+}
+
+/* ---------- Mode picker ---------- */
+.card--modes {
+  width: min(100%, 620px);
+  transform: rotate(0.6deg);
+}
+.card--modes .heading {
+  margin-bottom: 20px;
+}
+.mode-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 16px;
+  margin: 0 0 22px;
+  padding: 0;
+  list-style: none;
+}
+.mode-list li:nth-child(odd) .mode-card {
+  --tilt: -1.2deg;
+}
+.mode-list li:nth-child(even) .mode-card {
+  --tilt: 1deg;
+}
+.mode-card {
+  --card-bg: var(--paper);
+  --tilt: 0deg;
+  position: relative;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  justify-items: start;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  padding: 16px 16px 14px;
+  text-align: left;
+  color: var(--ink);
+  font: inherit;
+  background: var(--card-bg);
+  border: var(--border);
+  border-radius: 20px;
+  box-shadow: var(--pop);
+  transform: rotate(var(--tilt));
+  cursor: pointer;
+  transition:
+    transform var(--duration-fast) var(--ease-bounce),
+    box-shadow var(--duration-fast);
+}
+.mode-card:hover {
+  transform: translate(-2px, -3px) rotate(0deg);
+  box-shadow: 7px 7px 0 var(--ink);
+}
+.mode-card:active {
+  transform: translate(3px, 3px);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+.mode-card:focus-visible {
+  outline: 3px dashed var(--ink);
+  outline-offset: 5px;
+}
+/* The mode "Play" will start: a sunny ribbon, so the current choice reads at a glance. */
+.mode-card[aria-current='true']::after {
+  content: 'Current';
+  position: absolute;
+  top: -12px;
+  right: 12px;
+  padding: 2px 10px;
+  font: 0.85rem var(--font-display);
+  background: var(--yolk);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-chip);
+  transform: rotate(6deg);
+}
+.mode-card__icon svg {
+  display: block;
+  width: 38px;
+  height: 38px;
+  color: var(--ink);
+}
+.mode-card__name {
+  font: 1.45rem / 1 var(--font-display);
+}
+.mode-card__rule {
+  font-size: var(--text-sm);
+  line-height: 1.35;
+  color: var(--muted);
+}
+.mode-card__best {
+  margin-top: 4px;
+  font-size: var(--text-sm);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.mode-card__best b {
+  font: 1.05rem var(--font-display);
+  color: var(--ink);
+  letter-spacing: 0;
+}
+.mode-card--rush {
+  --card-bg: #ffe9c7;
+}
+.mode-card--night {
+  --card-bg: var(--night);
+  color: var(--cream);
+}
+.mode-card--night .mode-card__rule,
+.mode-card--night .mode-card__best {
+  color: #c6cff0;
+}
+.mode-card--night .mode-card__best b {
+  color: var(--night-glow);
+}
+.mode-card--night .mode-card__icon svg {
+  color: var(--ink);
+  filter: drop-shadow(0 0 6px rgba(255, 227, 90, 0.6));
+}
+
+/* ---------- Leaderboard mode switch ---------- */
+.mode-switch {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: -4px 0 12px;
+}
+.mode-switch__btn {
+  padding: 5px 14px;
+  font: 1rem var(--font-display);
+  color: var(--ink);
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-chip);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast),
+    transform var(--duration-fast);
+}
+.mode-switch__btn:hover {
+  transform: translateY(-1px);
+}
+.mode-switch__btn[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--yolk);
+}
+.mode-switch__btn:focus-visible {
+  outline: 3px dashed var(--ink);
+  outline-offset: 3px;
+}
+
+/* ---------- End card variants ---------- */
+.heading--win {
+  color: var(--yolk);
+  -webkit-text-stroke: 2px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 4px 4px 0 var(--ink);
+  transform: rotate(-3deg);
+  animation: buzzer 520ms var(--ease-bounce) both;
+}
+@keyframes buzzer {
+  0% {
+    transform: rotate(-3deg) scale(0.4);
+  }
+  55% {
+    transform: rotate(2deg) scale(1.12);
+  }
+}
+.over-sub {
+  margin: -8px 0 14px;
+  font-weight: 800;
+  color: var(--gator-deep);
+}
+.mode-pill {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 1px 10px 2px;
+  font: 0.85rem var(--font-display);
+  letter-spacing: 0.02em;
+  background: var(--ink);
+  color: var(--yolk);
+  border-radius: var(--radius-chip);
+}
+
+/* ---------- HUD countdown ---------- */
+.chip--warn {
+  background: var(--coral);
+  color: var(--paper);
+  animation: tick 1s steps(2, jump-none) infinite;
+}
+.chip--warn dt {
+  color: var(--paper);
+}
+@keyframes tick {
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+@media (max-width: 560px) {
+  .mode-list {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .mode-card {
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto;
+    column-gap: 12px;
+    padding: 12px 14px;
+  }
+  .mode-card__icon {
+    grid-row: 1 / span 3;
+    align-self: center;
+  }
+  .mode-card__name,
+  .mode-card__rule,
+  .mode-card__best {
+    grid-column: 2;
+  }
+}

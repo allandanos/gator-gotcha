@@ -3,9 +3,13 @@
  * Pure and storage-injected so it can be tested and never pulls in the online bundle.
  */
 
+import { parseMode, type ModeId } from '../sim/rules';
+
 export interface PendingRun {
   readonly seed: string;
   readonly log: string;
+  /** Missing on runs queued before modes existed: those are classic. */
+  readonly mode: ModeId;
   readonly finishedAt: number;
 }
 
@@ -22,13 +26,18 @@ const KEY = 'gator-gotcha:pending';
 /** Bad request, duplicate, too large, failed replay. */
 const FINAL_REJECTIONS = new Set([400, 409, 413, 422]);
 
-function isPendingRun(v: unknown): v is PendingRun {
-  if (typeof v !== 'object' || v === null) return false;
+function toPendingRun(v: unknown): PendingRun | null {
+  if (typeof v !== 'object' || v === null) return null;
   const r = v as Record<string, unknown>;
-  return typeof r.seed === 'string' && typeof r.log === 'string' && typeof r.finishedAt === 'number';
+  if (typeof r.seed !== 'string' || typeof r.log !== 'string' || typeof r.finishedAt !== 'number') {
+    return null;
+  }
+  const mode = r.mode === undefined ? 'classic' : parseMode(r.mode);
+  return mode ? { seed: r.seed, log: r.log, mode, finishedAt: r.finishedAt } : null;
 }
 
-const sameRun = (a: PendingRun, b: PendingRun) => a.seed === b.seed && a.log === b.log;
+const sameRun = (a: PendingRun, b: PendingRun) =>
+  a.seed === b.seed && a.log === b.log && a.mode === b.mode;
 
 /** What to do with a queued run after the server answered with `status`. */
 export function flushDecision(status: SubmitStatus): FlushDecision {
@@ -45,7 +54,8 @@ export function createPendingRuns(store: KeyValueStore | null) {
       const raw = store?.getItem(KEY);
       if (!raw) return [];
       const parsed: unknown = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed.filter(isPendingRun) : [];
+      if (!Array.isArray(parsed)) return [];
+      return parsed.map(toPendingRun).filter((r): r is PendingRun => r !== null);
     } catch {
       return [];
     }

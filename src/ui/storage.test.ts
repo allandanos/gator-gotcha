@@ -1,5 +1,9 @@
 import {
   bumpRunCount,
+  loadBest,
+  loadMode,
+  saveBest,
+  saveMode,
   hasStoredSession,
   loadInstallDismissedAt,
   loadNickname,
@@ -130,5 +134,32 @@ describe('install offer memory', () => {
     vi.stubGlobal('window', throwing);
     expect(bumpRunCount()).toBe(1);
     expect(loadInstallDismissedAt()).toBeNull();
+  });
+});
+
+describe('per-mode best and last mode', () => {
+  it('keeps classic on the original key and other modes apart', () => {
+    const storage = memoryStorage({ 'gator-gotcha:best': '1200' });
+    vi.stubGlobal('window', { localStorage: storage });
+    expect(loadBest('classic')).toBe(1200);
+    expect(loadBest('rush')).toBe(0);
+    saveBest('rush', 900.7);
+    expect(loadBest('rush')).toBe(900);
+    expect(loadBest('classic')).toBe(1200);
+    expect(storage.getItem('gator-gotcha:best:rush')).toBe('900');
+  });
+
+  it('remembers the last ranked mode and ignores junk', () => {
+    vi.stubGlobal('window', { localStorage: memoryStorage({ 'gator-gotcha:mode': 'turbo' }) });
+    expect(loadMode()).toBe('classic');
+    saveMode('night');
+    expect(loadMode()).toBe('night');
+  });
+
+  it('falls back when storage is blocked', () => {
+    vi.stubGlobal('window', throwing);
+    expect(loadBest('night')).toBe(0);
+    expect(loadMode()).toBe('classic');
+    expect(() => saveMode('rush')).not.toThrow();
   });
 });

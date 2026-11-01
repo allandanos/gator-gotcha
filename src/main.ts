@@ -2,6 +2,7 @@ import '@fontsource/lilita-one/latin-400.css';
 import '@fontsource/nunito/latin-600.css';
 import '@fontsource/nunito/latin-800.css';
 import './styles.css';
+import './modes.css';
 import { AudioEngine } from './audio/audio';
 import { Music } from './audio/music';
 import { playEvents } from './audio/sfx';
@@ -14,6 +15,7 @@ import { Effects } from './render/effects';
 import { Renderer } from './render/renderer';
 import { dequantizeInput, InputRecorder, quantizeInput } from './sim/input';
 import { dailyDateOf, dailySeed, encodeLog } from './sim/replay';
+import { MODE_LABELS, parseMode, rulesForMode, type ModeId } from './sim/rules';
 import { scoreOf } from './sim/scoring';
 import type { World } from './sim/types';
 import { createWorld, step } from './sim/world';
@@ -28,30 +30,40 @@ import { pickBootSeed } from './ui/bootSeed';
 import { $, formatTime, isTypingTarget } from './ui/dom';
 import { Hud } from './ui/hud';
 import { isStandalone, setupInstall } from './ui/install';
+import { ModesUi, showPlayMode } from './ui/modes';
 import { OnlineUi } from './ui/onlineUi';
+import { END_DELAY, rankedHeadline } from './ui/runEnd';
 import { fillGameOver, showScreen } from './ui/screens';
 import {
   loadBest,
+  loadMode,
   loadMuted,
   loadSeed,
   saveBest,
+  saveMode,
   saveMuted,
   saveSeed,
   takeUpdatedFrom,
 } from './ui/storage';
 import { setupUpdates } from './ui/updates';
 
-type Phase = 'title' | 'playing' | 'paused' | 'caught' | 'over';
+/** `ending`: the run is over (chomp, buzzer) and its animation plays before the card. */
+type Phase = 'title' | 'playing' | 'paused' | 'ending' | 'over';
 
-/** Time the chomp animation plays before the game-over card appears. */
-const CAUGHT_DELAY = 1.1;
 const MUSIC_INTENSITY = { wander: 0, search: 0.5, chase: 1 } as const;
 
-function seedUrl(seed: string, keepChallenge = false): string {
+function seedUrl(seed: string, mode: ModeId, keepChallenge = false): string {
   const url = new URL(window.location.href);
   url.searchParams.set('seed', seed);
+  if (mode === 'classic') url.searchParams.delete('mode');
+  else url.searchParams.set('mode', mode);
   if (!keepChallenge) url.searchParams.delete('challenge');
   return url.toString();
+}
+
+/** A link's `mode` wins; a bare seed link (older shares) is classic; otherwise the last mode played. */
+function bootMode(params: URLSearchParams): ModeId {
+  return parseMode(params.get('mode')) ?? (params.has('seed') ? 'classic' : loadMode());
 }
 
 const todayIso = (): string => dailyDateOf(dailySeed(new Date())) as string;
@@ -92,14 +104,14 @@ function boot(): void {
   let seed =
     pickBootSeed(parseSeed(params.get('seed')), loadSeed(), dailySeed(new Date())) ?? randomSeed();
   saveSeed(seed);
-  // A shared-score link pins its seed; the challenge banner applies only while playing that seed.
-  const challengeSeed = params.get('challenge') ? seed : null;
-  let world: World = createWorld(seed);
+  let mode = bootMode(params);
+  // A shared-score link pins its seed and mode; the banner applies only while playing exactly that.
+  const challenge = params.get('challenge') ? { seed, mode } : null;
+  let world: World = createWorld(seed, rulesForMode(mode));
   let prev = world;
   let phase: Phase = 'title';
-  let caughtTimer = 0;
+  let endTimer = 0;
   let clock = 0;
-  let best = loadBest();
 
   const boardOpen = () => !$('#screen-board').hidden;
   // Reload into a new build only where no run can be lost; the title screen is the safe spot.
@@ -113,9 +125,13 @@ function boot(): void {
   };
 
   renderer.setMap(world.map);
-  $('#title-seed').textContent = seed;
-  void online.showChallenge(params.get('challenge'), seed);
-  $('#title-best').textContent = String(best);
+  const showTitle = () => {
+    $('#title-seed').textContent = seed;
+    $('#title-best').textContent = String(loadBest(mode));
+    showPlayMode(mode);
+    showScreen('title');
+  };
+  void online.showChallenge(params.get('challenge'), seed, mode);
 
   const syncMute = () => {
     muteBtn.setAttribute('aria-pressed', String(audio.isMuted));
@@ -131,22 +147,25 @@ function boot(): void {
     syncMute();
   };
 
-  const startRun = (nextSeed: string) => {
+  const startRun = (nextSeed: string, nextMode: ModeId = mode) => {
     audio.unlock();
     const fromOver = phase === 'over';
     if (fromOver) track('retry');
-    track('run_start', { seed: nextSeed, daily: nextSeed === dailySeed(new Date()), fromOver });
+    const daily = nextMode === 'classic' && nextSeed === dailySeed(new Date());
+    track('run_start', { seed: nextSeed, daily, fromOver, mode: nextMode });
     seed = nextSeed;
+    mode = nextMode;
     saveSeed(seed);
-    world = createWorld(seed);
+    world = createWorld(seed, rulesForMode(mode));
     prev = world;
     renderer.setMap(world.map);
     recorder.reset();
-    const isChallenge = seed === challengeSeed;
+    const isChallenge = challenge?.seed === seed && challenge.mode === mode;
     if (!isChallenge) $('#challenge-banner').hidden = true;
-    window.history.replaceState(null, '', seedUrl(seed, isChallenge));
+    window.history.replaceState(null, '', seedUrl(seed, mode, isChallenge));
     fx.reset();
     touch.reset();
+    hud.reset(world);
     hud.show(true);
     showScreen(null);
     music.stop();
@@ -173,31 +192,31 @@ function boot(): void {
   const finish = () => {
     phase = 'over';
     const score = scoreOf(world);
-    const isNewBest = score > best;
-    if (isNewBest) {
-      best = score;
-      saveBest(best);
-    }
+    const previousBest = loadBest(mode);
+    const isNewBest = score > previousBest;
+    if (isNewBest) saveBest(mode, score);
     fillGameOver({
+      ...rankedHeadline(world.status),
       score,
       eggs: world.eggsCollected,
       time: formatTime(world.time),
-      best,
+      best: Math.max(score, previousBest),
       isNewBest,
       seed,
+      modeLabel: mode === 'classic' ? '' : MODE_LABELS[mode],
     });
     hud.show(false);
     showScreen('over');
     install.onRunFinished();
-    void online.onGameOver(seed, encodeLog(recorder.bytes()));
-    track('run_end', { sec: world.time, eggs: world.eggsCollected, score });
+    void online.onGameOver(seed, encodeLog(recorder.bytes()), mode);
+    track('run_end', { sec: world.time, eggs: world.eggsCollected, score, mode });
     void flushEvents();
   };
 
   const update = (dt: number) => {
-    if (phase === 'caught') {
-      caughtTimer -= dt;
-      if (caughtTimer <= 0) finish();
+    if (phase === 'ending') {
+      endTimer -= dt;
+      if (endTimer <= 0) finish();
       return;
     }
     if (phase !== 'playing') return;
@@ -212,8 +231,8 @@ function boot(): void {
     }
     music.setIntensity(MUSIC_INTENSITY[world.gator.mode]);
     if (world.status !== 'playing') {
-      phase = 'caught';
-      caughtTimer = CAUGHT_DELAY;
+      phase = 'ending';
+      endTimer = END_DELAY[world.status];
       music.stop();
     }
   };
@@ -225,22 +244,33 @@ function boot(): void {
       fx.update(frameDt);
     }
     renderer.render(prev, world, phase === 'playing' ? alpha : 1, fx, clock);
-    if (phase === 'playing' || phase === 'caught') hud.update(world);
+    if (phase === 'playing' || phase === 'ending') hud.update(world);
   };
 
   // Buttons.
   $('#play-btn').addEventListener('click', () => startRun(seed));
-  $('#daily-btn').addEventListener('click', () => startRun(dailySeed(new Date())));
-  $('#title-board-btn').addEventListener('click', () => void online.openBoard('title'));
-  $('#over-board-btn').addEventListener('click', () => void online.openBoard('over'));
+  $('#daily-btn').addEventListener('click', () => startRun(dailySeed(new Date()), 'classic'));
+  const modes = new ModesUi(
+    (picked) => {
+      track('mode_select', { mode: picked });
+      saveMode(picked);
+      startRun(seed, picked);
+    },
+    showTitle,
+  );
+  const openModes = () => {
+    modes.prepare(mode);
+    showScreen('modes');
+  };
+  $('#modes-btn').addEventListener('click', openModes);
+  $('#title-board-btn').addEventListener('click', () => void online.openBoard('title', mode));
+  $('#over-board-btn').addEventListener('click', () => void online.openBoard('over', mode));
   $('#board-back-btn').addEventListener('click', closeBoard);
   $('#resume-btn').addEventListener('click', resume);
   $('#quit-btn').addEventListener('click', () => {
     phase = 'title';
     hud.show(false);
-    $('#title-best').textContent = String(best);
-    $('#title-seed').textContent = seed;
-    showScreen('title');
+    showTitle();
     updates.maybeApply();
   });
   $('#retry-btn').addEventListener('click', () => startRun(seed));
@@ -250,7 +280,7 @@ function boot(): void {
   const copyBtn = $<HTMLButtonElement>('#copy-btn');
   copyBtn.addEventListener('click', async () => {
     try {
-      await navigator.clipboard.writeText(online.lastShareUrl ?? seedUrl(seed));
+      await navigator.clipboard.writeText(online.lastShareUrl ?? seedUrl(seed, mode));
       copyBtn.textContent = 'Copied!';
       track('share', { via: 'copy' });
     } catch {
@@ -264,6 +294,8 @@ function boot(): void {
     if (e.repeat || isTypingTarget(e.target)) return;
     if (e.code === 'Escape' && boardOpen()) {
       closeBoard();
+    } else if (e.code === 'Escape' && !$('#screen-modes').hidden) {
+      showTitle();
     } else if (e.code === 'Escape' || e.code === 'KeyP') {
       if (phase === 'playing') pause();
       else if (phase === 'paused') resume();
@@ -296,7 +328,7 @@ function boot(): void {
   void flushEvents();
 
   void online.flushPending();
-  showScreen('title');
+  showTitle();
   createLoop(update, render).start();
 }
 

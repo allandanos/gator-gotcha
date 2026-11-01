@@ -3,6 +3,7 @@ import { Resvg } from '@resvg/resvg-js';
 import satori from 'satori';
 import { isUuid, logError } from './_lib/http.js';
 import { formatScore, formatTicks } from './_lib/format.js';
+import { MODE_LABELS } from '../src/sim/rules.js';
 import { supabaseRepository, type SharedScore } from './_lib/repository.js';
 
 type Node = { type: string; props: Record<string, unknown> & { children?: unknown } };
@@ -24,7 +25,9 @@ function stat(label: string, value: string): Node {
 }
 
 function card(s: SharedScore | null): Node {
-  const headline = s ? `${s.nickname} scored` : 'Grab eggs. Dodge the gator.';
+  const headline = s
+    ? `${s.nickname} scored${s.mode === 'classic' ? '' : ` in ${MODE_LABELS[s.mode]}`}`
+    : 'Grab eggs. Dodge the gator.';
   return h(
     'div',
     {

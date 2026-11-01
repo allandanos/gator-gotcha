@@ -81,6 +81,21 @@ describe('normalizeBatch', () => {
     expect(e?.props).toEqual({ sec: 1200, eggs: 0, score: 13 });
   });
 
+  it('keeps only known modes and campaign level numbers', () => {
+    const out = norm([
+      ev('run_start', { seed: 'lv01', daily: false, fromOver: false, mode: 'campaign', level: 3 }),
+      ev('run_end', { sec: 10, eggs: 1, score: 100, mode: 'rush', level: 99 }),
+      ev('mode_select', { mode: 'turbo' }),
+      ev('level_end', { level: 0, cleared: true, stars: 7, outcome: 'cleared' }),
+    ]).events;
+    expect(out.map((e) => e.props)).toEqual([
+      { seed: 'lv01', daily: false, fromOver: false, mode: 'campaign', level: 3 },
+      { sec: 10, eggs: 1, score: 100, mode: 'rush', level: 12 },
+      {},
+      { level: 1, cleared: true, stars: 3, outcome: 'cleared' },
+    ]);
+  });
+
   it('truncates long strings', () => {
     const [e] = norm([ev('title_view', { installed: false, referrer: 'x'.repeat(200) })]).events;
     expect(e?.props.referrer).toHaveLength(64);

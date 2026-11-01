@@ -1,5 +1,5 @@
 import { escapeHtml, isUuid, logError } from './_lib/http.js';
-import { formatScore, formatTicks } from './_lib/format.js';
+import { formatScore, formatTicks, modePrefix, modeQuery } from './_lib/format.js';
 import { supabaseRepository, type SharedScore } from './_lib/repository.js';
 
 // No meta refresh: link-preview crawlers follow it and would scrape the untagged game page instead.
@@ -9,8 +9,8 @@ function page(origin: string, s: SharedScore): string {
   const eggs = `${s.eggs} ${s.eggs === 1 ? 'egg' : 'eggs'}`;
   const desc = s.dailyDate
     ? `Daily Swamp ${s.dailyDate}: ${eggs} in ${formatTicks(s.ticks)}. Can you beat it?`
-    : `${eggs}, survived ${formatTicks(s.ticks)}. Same swamp, your turn. Can you beat it?`;
-  const target = `${origin}/?seed=${encodeURIComponent(s.seed)}&challenge=${encodeURIComponent(s.id)}`;
+    : `${modePrefix(s.mode)}${eggs}, survived ${formatTicks(s.ticks)}. Same swamp, your turn. Can you beat it?`;
+  const target = `${origin}/?seed=${encodeURIComponent(s.seed)}&challenge=${encodeURIComponent(s.id)}${modeQuery(s.mode)}`;
   const image = `${origin}/api/og?id=${encodeURIComponent(s.id)}`;
   const url = `${origin}/s/${encodeURIComponent(s.id)}`;
   const [t, d, tg, img, u] = [title, desc, target, image, url].map(escapeHtml);

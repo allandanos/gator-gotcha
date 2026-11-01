@@ -1,10 +1,12 @@
 import { currentUserId, ensureSession, supabase } from './client';
 import { NICKNAME_PATTERN } from '../core/nickname';
+import { parseMode, type ModeId } from '../sim/rules';
 
 export type Board = 'all' | 'daily';
 
 export interface SubmitResult {
   readonly id: string;
+  readonly mode: ModeId;
   readonly score: number;
   readonly eggs: number;
   readonly ticks: number;
@@ -26,6 +28,7 @@ export interface BoardRow {
 export interface Challenge {
   readonly id: string;
   readonly seed: string;
+  readonly mode: ModeId;
   readonly score: number;
   readonly nickname: string;
 }
@@ -48,14 +51,14 @@ export class SubmitError extends Error {
 }
 
 /** Submit a finished run for server-side replay verification. */
-export async function submitRun(seed: string, log: string): Promise<SubmitResult> {
+export async function submitRun(seed: string, log: string, mode: ModeId): Promise<SubmitResult> {
   let res: Response;
   try {
     const { token } = await ensureSession();
     res = await fetch('/api/scores', {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
-      body: JSON.stringify({ seed, log }),
+      body: JSON.stringify({ seed, log, mode }),
     });
   } catch (err) {
     // fetch (or the anonymous sign-in) never reached a server.
@@ -73,8 +76,15 @@ export async function submitRun(seed: string, log: string): Promise<SubmitResult
   return body.data;
 }
 
-export async function fetchBoard(board: Board, day: string | null, limit = 50): Promise<BoardRow[]> {
-  const { data, error } = await supabase().rpc('leaderboard', { board, day, lim: limit });
+export async function fetchBoard(
+  board: Board,
+  day: string | null,
+  mode: ModeId,
+  limit = 50,
+): Promise<BoardRow[]> {
+  // Classic omits `mode` so the call matches the function's original signature.
+  const args = { board, day, lim: limit, ...(mode === 'classic' ? {} : { mode }) };
+  const { data, error } = await supabase().rpc('leaderboard', args);
   if (error) throw new Error(error.message);
   return (data as Array<Record<string, unknown>>).map((r) => ({
     rank: Number(r.rank),
@@ -91,12 +101,18 @@ export async function fetchBoard(board: Board, day: string | null, limit = 50): 
 export async function fetchChallenge(id: string): Promise<Challenge | null> {
   const { data, error } = await supabase()
     .from('scores')
-    .select('id, seed, score, profiles(nickname)')
+    .select('id, seed, mode, score, profiles(nickname)')
     .eq('id', id)
     .maybeSingle();
   if (error || !data) return null;
   const profile = data.profiles as unknown as { nickname: string } | null;
-  return { id: data.id, seed: data.seed, score: data.score, nickname: profile?.nickname ?? 'A duck' };
+  return {
+    id: data.id,
+    seed: data.seed,
+    mode: parseMode(data.mode) ?? 'classic',
+    score: data.score,
+    nickname: profile?.nickname ?? 'A duck',
+  };
 }
 
 export async function getMyNickname(): Promise<string | null> {

@@ -1,4 +1,5 @@
 import { recordBotRun } from '../../src/sim/__fixtures__/recordBot.js';
+import { rulesForMode } from '../../src/sim/rules.js';
 import { dailySeed, encodeLog } from '../../src/sim/replay.js';
 import type { NewScore, ScoreRepository } from './repository.js';
 import { RATE_LIMIT_PER_MINUTE, submitScore } from './submitScore.js';
@@ -32,7 +33,7 @@ describe('submitScore', () => {
     const out = await submitScore(repo, 'good', body, NOW);
     expect(out).toEqual({
       ok: true,
-      result: { id: 'id-1', score: run.score, eggs: expect.any(Number), ticks: run.log.length, rank: 7, dailyRank: null },
+      result: { id: 'id-1', mode: 'classic', score: run.score, eggs: expect.any(Number), ticks: run.log.length, rank: 7, dailyRank: null },
     });
     expect(inserted[0]).toMatchObject({ userId: USER, seed: 'golden', dailyDate: null, score: run.score });
   });
@@ -60,7 +61,55 @@ describe('submitScore', () => {
     expect(inserted[0]?.dailyDate).toBeNull();
   });
 
+  it('treats a submission without a mode as classic', async () => {
+    const { repo, inserted } = fakeRepo();
+    await submitScore(repo, 'good', body, NOW);
+    expect(inserted[0]?.mode).toBe('classic');
+  });
+
+  it('replays and stores ranked modes on their own board', async () => {
+    const rush = recordBotRun('golden', 3, rulesForMode('rush'));
+    const ranks: string[] = [];
+    const { repo, inserted } = fakeRepo({
+      rankFor: async (board, _day, mode) => (ranks.push(`${board}:${mode}`), 4),
+    });
+    const out = await submitScore(repo, 'good', { seed: 'golden', log: encodeLog(rush.log), mode: 'rush' }, NOW);
+    expect(out).toMatchObject({ ok: true, result: { score: rush.score, mode: 'rush', rank: 4, dailyRank: null } });
+    expect(inserted[0]).toMatchObject({ mode: 'rush', score: rush.score });
+    expect(ranks).toEqual(['all:rush']);
+  });
+
+  it('keeps the daily board classic-only', async () => {
+    const seed = dailySeed(NOW);
+    const night = recordBotRun(seed, 5, rulesForMode('night'));
+    const { repo, inserted } = fakeRepo();
+    const out = await submitScore(repo, 'good', { seed, log: encodeLog(night.log), mode: 'night' }, NOW);
+    expect(out.ok && out.result.dailyRank).toBeNull();
+    expect(inserted[0]).toMatchObject({ mode: 'night', dailyDate: null });
+  });
+
+  it('does not treat the same log in another mode as a duplicate', async () => {
+    const night = recordBotRun('golden', 3, rulesForMode('night'));
+    const { repo, inserted } = fakeRepo();
+    const log = encodeLog(night.log);
+    const a = await submitScore(repo, 'good', { seed: 'golden', log, mode: 'night' }, NOW);
+    const b = await submitScore(repo, 'good', { seed: 'golden', log, mode: 'classic' }, NOW);
+    expect(a.ok).toBe(true);
+    // Classic replays the same log to its own (possibly identical) result; either way it's a new row.
+    expect(b.ok || (b as { status: number }).status === 422).toBe(true);
+    expect(new Set(inserted.map((r) => r.inputHash)).size).toBe(inserted.length);
+  });
+
+  it('keeps the classic duplicate hash unchanged for already-queued runs', async () => {
+    const { createHash } = await import('node:crypto');
+    const { repo, inserted } = fakeRepo();
+    await submitScore(repo, 'good', body, NOW);
+    expect(inserted[0]?.inputHash).toBe(createHash('sha256').update(`golden:${body.log}`).digest('hex'));
+  });
+
   it.each([
+    ['unknown mode', 'good', { ...body, mode: 'campaign' }, 400],
+    ['non-string mode', 'good', { ...body, mode: 2 }, 400],
     ['missing token', null, body, 401],
     ['bad token', 'nope', body, 401],
     ['malformed body', 'good', { seed: 1 }, 400],

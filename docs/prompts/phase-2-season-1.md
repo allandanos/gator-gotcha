@@ -51,8 +51,11 @@ do not decide alone.
 1. Add `export const RULESET = 1;` to `src/config.ts`. Ruleset `0` is the implicit legacy value.
 2. Migration `supabase/migrations/20261115000000_rulesets.sql`:
    - `alter table public.scores add column ruleset smallint not null default 0;`
-   - `leaderboard(board, day, lim, season smallint default null)` and
-     `rank_for(..., season smallint default null)`. A null season means the current one; the
+   - `leaderboard(board, day, lim, mode, season smallint default null)` and
+     `rank_for(board, day, player, value, mode, season smallint default null)`; the `mode`
+     parameter already exists (migration `20261102000000_modes.sql`), add `season` after it.
+     The Season 0 archive is per mode. Season 1 mechanics apply to every ranked mode unless the
+     owner decides otherwise (ask before Task B). A null season means the current one; the
      function reads it from a new one-row table, `public.app_config(current_ruleset smallint)`,
      which the service role writes and anyone can read.
    - Index `(ruleset, score desc)` and `(ruleset, daily_date, score desc)`.

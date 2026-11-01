@@ -28,6 +28,7 @@ describe('share page', () => {
     const html = renderSharePage('https://g.example', {
       id: '11111111-1111-4111-8111-111111111111',
       seed: 'abc123',
+      mode: 'classic',
       dailyDate: null,
       score: 2340,
       eggs: 12,
@@ -44,6 +45,7 @@ describe('share page', () => {
     const html = renderSharePage('https://g.example', {
       id: '11111111-1111-4111-8111-111111111111',
       seed: 'abc123',
+      mode: 'classic',
       dailyDate: '2026-10-31',
       score: 10,
       eggs: 1,
@@ -54,5 +56,20 @@ describe('share page', () => {
     expect(html).toContain('<script src="/share-redirect.js" defer></script>');
     expect(html).toContain('data-target="https://g.example/?seed=abc123');
     expect(html).toContain('Daily Swamp 2026-10-31: 1 egg in 0:01');
+  });
+
+  it('labels other modes and opens the challenge in that mode', () => {
+    const html = renderSharePage('https://g.example', {
+      id: '11111111-1111-4111-8111-111111111111',
+      seed: 'abc123',
+      mode: 'rush',
+      dailyDate: null,
+      score: 900,
+      eggs: 4,
+      ticks: 5400,
+      nickname: 'Duck',
+    });
+    expect(html).toContain('Egg Rush: 4 eggs, survived 1:30');
+    expect(html).toContain('/?seed=abc123&#38;challenge=11111111-1111-4111-8111-111111111111&#38;mode=rush');
   });
 });
