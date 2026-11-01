@@ -1,5 +1,6 @@
 import { SIM_DT } from '../config.js';
-import { computeScore } from './scoring.js';
+import { rulesForMode, type ModeId } from './rules.js';
+import { scoreOf } from './scoring.js';
 import { dequantizeInput, type InputByte } from './input.js';
 import { createWorld, step } from './world.js';
 
@@ -15,7 +16,7 @@ export type ReplayOutcome =
 /** Run-length encode (count ≤ 255, byte) pairs, then base64. */
 export function encodeLog(bytes: ArrayLike<InputByte>): string {
   const out: number[] = [];
-  for (let i = 0; i < bytes.length; ) {
+  for (let i = 0; i < bytes.length;) {
     const b = bytes[i] as number;
     let n = 1;
     while (n < 255 && i + n < bytes.length && bytes[i + n] === b) n++;
@@ -47,20 +48,25 @@ export function decodeLog(encoded: string, maxTicks = MAX_REPLAY_TICKS): Uint8Ar
 }
 
 /**
- * Re-run a recorded game. A valid run ends with the duck caught on exactly the last tick,
- * so logs can't be truncated early or padded afterwards.
+ * Re-run a recorded game under a ranked mode. A valid run ends (caught, or out of time in a
+ * timed mode) on exactly the last tick, so logs can't be truncated early or padded afterwards.
  */
-export function replayRun(seed: string, inputs: ArrayLike<InputByte>, maxTicks = MAX_REPLAY_TICKS): ReplayOutcome {
+export function replayRun(
+  seed: string,
+  inputs: ArrayLike<InputByte>,
+  mode: ModeId = 'classic',
+  maxTicks = MAX_REPLAY_TICKS,
+): ReplayOutcome {
   if (inputs.length === 0) return { ok: false, reason: 'empty' };
   if (inputs.length > maxTicks) return { ok: false, reason: 'too_long' };
-  let world = createWorld(seed);
+  let world = createWorld(seed, rulesForMode(mode));
   for (let i = 0; i < inputs.length; i++) {
     world = step(world, dequantizeInput(inputs[i] as number), SIM_DT);
-    if (world.status === 'caught') {
+    if (world.status !== 'playing') {
       if (i !== inputs.length - 1) return { ok: false, reason: 'trailing_input' };
       return {
         ok: true,
-        score: computeScore(world.eggsCollected, world.time),
+        score: scoreOf(world),
         eggs: world.eggsCollected,
         ticks: inputs.length,
       };

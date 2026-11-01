@@ -14,7 +14,7 @@ import { Effects } from './render/effects';
 import { Renderer } from './render/renderer';
 import { dequantizeInput, InputRecorder, quantizeInput } from './sim/input';
 import { dailyDateOf, dailySeed, encodeLog } from './sim/replay';
-import { computeScore } from './sim/scoring';
+import { scoreOf } from './sim/scoring';
 import type { World } from './sim/types';
 import { createWorld, step } from './sim/world';
 import {
@@ -172,7 +172,7 @@ function boot(): void {
 
   const finish = () => {
     phase = 'over';
-    const score = computeScore(world.eggsCollected, world.time);
+    const score = scoreOf(world);
     const isNewBest = score > best;
     if (isNewBest) {
       best = score;
@@ -211,7 +211,7 @@ function boot(): void {
       playEvents(audio, world.events);
     }
     music.setIntensity(MUSIC_INTENSITY[world.gator.mode]);
-    if (world.status === 'caught') {
+    if (world.status !== 'playing') {
       phase = 'caught';
       caughtTimer = CAUGHT_DELAY;
       music.stop();

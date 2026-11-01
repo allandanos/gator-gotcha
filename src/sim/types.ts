@@ -1,4 +1,5 @@
 import type { Vec } from '../core/vec.js';
+import type { RunRules } from './rules.js';
 
 export type ObstacleKind = 'log' | 'reeds';
 
@@ -63,7 +64,12 @@ export type GameEvent =
   | { readonly type: 'spotted' }
   | { readonly type: 'lost' }
   | { readonly type: 'sprintStart' }
-  | { readonly type: 'caught'; readonly pos: Vec };
+  | { readonly type: 'caught'; readonly pos: Vec }
+  | { readonly type: 'timeUp' }
+  | { readonly type: 'cleared' };
+
+/** `playing` until the run ends: caught by the gator, out of time, or the level goal reached. */
+export type RunStatus = 'playing' | 'caught' | 'timeUp' | 'cleared';
 
 export interface InputState {
   /** Desired move direction, length 0..1. */
@@ -73,14 +79,17 @@ export interface InputState {
 
 export interface World {
   readonly map: GameMap;
+  readonly rules: RunRules;
   readonly rngState: number;
   readonly time: number;
   readonly eggsCollected: number;
+  /** Times the gator went from not-chasing to chasing. */
+  readonly timesSpotted: number;
   readonly nextEggId: number;
   readonly duck: Duck;
   readonly gator: Gator;
   readonly eggs: readonly Egg[];
-  readonly status: 'playing' | 'caught';
+  readonly status: RunStatus;
   /** Events emitted during the most recent step only. */
   readonly events: readonly GameEvent[];
 }

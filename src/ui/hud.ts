@@ -1,9 +1,13 @@
 import { DUCK } from '../config';
-import { computeScore } from '../sim/scoring';
+import { scoreOf } from '../sim/scoring';
 import type { GatorMode, World } from '../sim/types';
 import { $, formatTime } from './dom';
 
-const STATUS: Record<GatorMode, string> = { wander: 'Hidden', search: 'Sniffing…', chase: 'Spotted!' };
+const STATUS: Record<GatorMode, string> = {
+  wander: 'Hidden',
+  search: 'Sniffing…',
+  chase: 'Spotted!',
+};
 
 /** DOM heads-up display. Writes only when values change to avoid layout churn. */
 export class Hud {
@@ -21,7 +25,7 @@ export class Hud {
   }
 
   update(w: World): void {
-    const score = String(computeScore(w.eggsCollected, w.time));
+    const score = String(scoreOf(w));
     const eggs = String(w.eggsCollected);
     const time = formatTime(w.time);
     const stamina = Math.round((w.duck.stamina / DUCK.staminaMax) * 100) / 100;
@@ -32,7 +36,8 @@ export class Hud {
       this.staminaFill.style.transform = `scaleX(${stamina})`;
       this.stamina.setAttribute('aria-valuenow', String(Math.round(stamina * 100)));
     }
-    if (w.duck.exhausted !== this.last.exhausted) this.stamina.classList.toggle('is-exhausted', w.duck.exhausted);
+    if (w.duck.exhausted !== this.last.exhausted)
+      this.stamina.classList.toggle('is-exhausted', w.duck.exhausted);
     if (w.gator.mode !== this.last.mode) {
       this.status.textContent = STATUS[w.gator.mode];
       this.status.dataset.mode = w.gator.mode;

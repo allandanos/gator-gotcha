@@ -69,3 +69,9 @@ export const EGGS = {
 export const SCORE = { perEgg: 100, perSecond: 10 } as const;
 
 export const SIM_DT = 1 / 60;
+
+/** Ranked mode tuning. Classic must stay at the neutral values: its scores are replayed as-is. */
+export const MODES = {
+  rush: { timeLimit: 90, eggsOnField: 8, startLevel: 0.2, clutchBonus: 500 },
+  night: { coneRangeFactor: 0.65, hearFactor: 1.5, lanternRadius: 210 },
+} as const;

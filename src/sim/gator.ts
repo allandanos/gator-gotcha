@@ -1,7 +1,16 @@
 import { GATOR } from '../config.js';
 import { dcos, dsin } from '../core/dmath.js';
 import type { Rng } from '../core/rng.js';
-import { angleDiff, angleOf, dist, fromAngle, scale, sub, turnToward, type Vec } from '../core/vec.js';
+import {
+  angleDiff,
+  angleOf,
+  dist,
+  fromAngle,
+  scale,
+  sub,
+  turnToward,
+  type Vec,
+} from '../core/vec.js';
 import { moveCircle } from './collision.js';
 import type { GatorStats } from './difficulty.js';
 import { centerOf, findPath, freeCells, gridClear } from './nav.js';
@@ -47,7 +56,12 @@ export function snoutOf(g: Pick<Gator, 'pos' | 'heading'>): Vec {
 
 /** Perception: decide the mode for this step and emit spotted/lost events. */
 export function perceive(g: Gator, ctx: GatorContext): GatorResult {
-  const cone = { origin: g.pos, heading: g.heading, range: ctx.stats.coneRange, angle: ctx.stats.coneAngle };
+  const cone = {
+    origin: g.pos,
+    heading: g.heading,
+    range: ctx.stats.coneRange,
+    angle: ctx.stats.coneAngle,
+  };
   const sees = g.grace <= 0 && canSee(cone, ctx.duckPos, ctx.map.obstacles);
   if (sees) {
     const events: GameEvent[] = g.mode === 'chase' ? [] : [{ type: 'spotted' }];
@@ -55,13 +69,27 @@ export function perceive(g: Gator, ctx: GatorContext): GatorResult {
   }
   if (g.mode === 'chase') {
     return {
-      gator: { ...g, mode: 'search', target: g.lastSeen, path: [], repathIn: 0, waitTimer: GATOR.searchSweepTime },
+      gator: {
+        ...g,
+        mode: 'search',
+        target: g.lastSeen,
+        path: [],
+        repathIn: 0,
+        waitTimer: GATOR.searchSweepTime,
+      },
       events: [{ type: 'lost' }],
     };
   }
-  if (ctx.splash && dist(g.pos, ctx.splash) <= GATOR.splashHearRadius) {
+  if (ctx.splash && dist(g.pos, ctx.splash) <= ctx.stats.hearRadius) {
     return {
-      gator: { ...g, mode: 'search', target: ctx.splash, path: [], repathIn: 0, waitTimer: GATOR.searchSweepTime },
+      gator: {
+        ...g,
+        mode: 'search',
+        target: ctx.splash,
+        path: [],
+        repathIn: 0,
+        waitTimer: GATOR.searchSweepTime,
+      },
       events: [],
     };
   }
@@ -110,12 +138,21 @@ function plan(g: Gator, ctx: GatorContext): { gator: Gator; aim: Vec | null; spe
   const waitTimer = g.waitTimer - ctx.dt;
   if (waitTimer > 0) {
     const heading =
-      g.mode === 'search' ? g.heading + dsin(waitTimer * 2.2) * SWEEP_TURN_RATE * ctx.dt : g.heading;
+      g.mode === 'search'
+        ? g.heading + dsin(waitTimer * 2.2) * SWEEP_TURN_RATE * ctx.dt
+        : g.heading;
     return { gator: { ...g, waitTimer, heading, target: null, path: [] }, aim: null, speed: 0 };
   }
   const pause = ctx.rng.range(GATOR.wanderPauseMin, GATOR.wanderPauseMax);
   return {
-    gator: { ...g, mode: 'wander', target: pickWanderTarget(ctx), path: [], repathIn: 0, waitTimer: pause },
+    gator: {
+      ...g,
+      mode: 'wander',
+      target: pickWanderTarget(ctx),
+      path: [],
+      repathIn: 0,
+      waitTimer: pause,
+    },
     aim: null,
     speed: 0,
   };
@@ -131,7 +168,10 @@ export function updateGator(g0: Gator, ctx: GatorContext): GatorResult {
   const desired = angleOf(sub(planned.aim, g.pos));
   const heading = turnToward(g.heading, desired, GATOR.turnRate * ctx.dt);
   // Slow down while turning hard so it can't strafe; this is what makes juking work.
-  const alignment = Math.max(0.2, dcos(Math.min(Math.abs(angleDiff(heading, desired)), Math.PI / 2)));
+  const alignment = Math.max(
+    0.2,
+    dcos(Math.min(Math.abs(angleDiff(heading, desired)), Math.PI / 2)),
+  );
   const step = Math.min(planned.speed * alignment * ctx.dt, dist(g.pos, planned.aim));
   const pos = moveCircle(g.pos, scale(fromAngle(heading), step), GATOR.radius, ctx.map.obstacles);
   return { gator: { ...g, pos, heading }, events: perceived.events };
