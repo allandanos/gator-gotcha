@@ -588,6 +588,76 @@ code {
   gap: 8px;
 }
 
+/* ---------- Install card (game over) ---------- */
+.install-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  align-items: center;
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  text-align: left;
+  background: var(--paper);
+  border: var(--border);
+  border-radius: 18px;
+  box-shadow: var(--pop);
+  transform: rotate(0.6deg);
+  animation: install-in var(--duration-normal) var(--ease-bounce) both;
+}
+.install-card__icon {
+  grid-row: span 2;
+  align-self: start;
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+}
+.install-card__title {
+  margin: 0;
+  font: 1.1rem / 1.1 var(--font-display);
+}
+.install-card__body {
+  margin: 2px 0 0;
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  color: var(--muted);
+}
+.install-card__body b {
+  color: var(--ink);
+  font-weight: 800;
+}
+.install-card__glyph {
+  width: 0.95em;
+  height: 1.15em;
+  margin: 0 1px;
+  vertical-align: -0.2em;
+  color: var(--water);
+}
+.install-card__actions {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: center;
+  margin-top: 6px;
+}
+.btn--install {
+  color: #ffffff;
+  text-decoration: none;
+  background: var(--gator-deep);
+}
+.btn--install:hover {
+  background: var(--gator);
+}
+.install-card__dismiss {
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+@keyframes install-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) rotate(0.6deg);
+  }
+}
+
 /* ---------- Leaderboard ---------- */
 .card--board {
   width: min(100%, 520px);
@@ -816,6 +886,17 @@ code {
   .btn--small {
     min-height: 36px;
     font-size: 0.95rem;
+  }
+  .install-card {
+    margin-top: 10px;
+    padding: 8px 10px;
+  }
+  .install-card__icon {
+    width: 32px;
+    height: 32px;
+  }
+  .install-card__actions {
+    margin-top: 2px;
   }
   .card--over .actions {
     flex-wrap: nowrap;

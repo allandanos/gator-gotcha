@@ -84,6 +84,7 @@ function boot(): void {
   const music = new Music(audio);
   const muteBtn = $<HTMLButtonElement>('#mute-btn');
   const online = new OnlineUi(showScreen, todayIso);
+  const install = setupInstall();
   setTokenProvider(() => online.accessToken());
   const recorder = new InputRecorder();
 
@@ -187,6 +188,7 @@ function boot(): void {
     });
     hud.show(false);
     showScreen('over');
+    install.onRunFinished();
     void online.onGameOver(seed, encodeLog(recorder.bytes()));
     track('run_end', { sec: world.time, eggs: world.eggsCollected, score });
     void flushEvents();
@@ -289,7 +291,6 @@ function boot(): void {
   }
 
   renderer.resize();
-  setupInstall();
   setupAnalyticsFlush();
   trackBoot();
   void flushEvents();

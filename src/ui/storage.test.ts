@@ -1,8 +1,11 @@
 import {
+  bumpRunCount,
   hasStoredSession,
+  loadInstallDismissedAt,
   loadNickname,
   loadSeed,
   markUpdatingFrom,
+  saveInstallDismissedAt,
   saveNickname,
   saveSeed,
   takeUpdatedFrom,
@@ -97,5 +100,35 @@ describe('update marker', () => {
     vi.stubGlobal('window', throwing);
     markUpdatingFrom('abc1234');
     expect(takeUpdatedFrom()).toBeNull();
+  });
+});
+
+describe('install offer memory', () => {
+  it('counts finished runs', () => {
+    vi.stubGlobal('window', { localStorage: memoryStorage() });
+    expect(bumpRunCount()).toBe(1);
+    expect(bumpRunCount()).toBe(2);
+  });
+
+  it('restarts the count from a corrupt value', () => {
+    vi.stubGlobal('window', { localStorage: memoryStorage({ 'gator-gotcha:runs': 'lots' }) });
+    expect(bumpRunCount()).toBe(1);
+  });
+
+  it('round-trips the "Not now" time and rejects garbage', () => {
+    vi.stubGlobal('window', { localStorage: memoryStorage() });
+    expect(loadInstallDismissedAt()).toBeNull();
+    saveInstallDismissedAt(1_790_000_000_000);
+    expect(loadInstallDismissedAt()).toBe(1_790_000_000_000);
+    vi.stubGlobal('window', {
+      localStorage: memoryStorage({ 'gator-gotcha:install-dismissed': '-5' }),
+    });
+    expect(loadInstallDismissedAt()).toBeNull();
+  });
+
+  it('degrades to "first run, never dismissed" without storage', () => {
+    vi.stubGlobal('window', throwing);
+    expect(bumpRunCount()).toBe(1);
+    expect(loadInstallDismissedAt()).toBeNull();
   });
 });

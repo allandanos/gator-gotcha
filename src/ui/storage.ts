@@ -8,6 +8,8 @@ const KEYS = {
   nickname: 'gator-gotcha:nickname',
   seed: 'gator-gotcha:seed',
   updatedFrom: 'gator-gotcha:updated-from',
+  runs: 'gator-gotcha:runs',
+  installDismissed: 'gator-gotcha:install-dismissed',
 } as const;
 /** supabase-js persists its session under `sb-<project-ref>-auth-token`. */
 const SESSION_KEY = /^sb-[a-z0-9]+-auth-token$/;
@@ -63,6 +65,27 @@ export function loadSeed(): string | null {
 export function saveSeed(seed: string): void {
   const valid = parseSeed(seed);
   if (valid) write(KEYS.seed, valid);
+}
+
+function readPositiveInt(key: string): number | null {
+  const n = Number(read(key));
+  return Number.isSafeInteger(n) && n > 0 ? n : null;
+}
+
+/** Count one more finished run and return the new total (drives when to offer an install). */
+export function bumpRunCount(): number {
+  const runs = (readPositiveInt(KEYS.runs) ?? 0) + 1;
+  write(KEYS.runs, String(runs));
+  return runs;
+}
+
+/** When the player last chose "Not now" on the install card (epoch ms), if ever. */
+export function loadInstallDismissedAt(): number | null {
+  return readPositiveInt(KEYS.installDismissed);
+}
+
+export function saveInstallDismissedAt(at: number): void {
+  write(KEYS.installDismissed, String(Math.floor(at)));
 }
 
 /** Remember the running build just before reloading into an update. */

@@ -20,11 +20,11 @@
         <li><b>Your nickname</b>: random (like "Duck1234") until you change it. Shown publicly on the leaderboard.</li>
         <li><b>Your scores</b>: score, eggs, time survived, the swamp seed, and the inputs of the run (used only to verify the score is genuine).</li>
         <li><b>If you connect Facebook</b>: your Facebook user ID, name and profile picture, used to show your name/avatar on the leaderboard and keep your scores across devices. We don't post to Facebook on your behalf.</li>
-        <li><b>On your device only</b>: your local best score and mute setting (browser storage).</li>
+        <li><b>On your device only</b>: your local best score, mute setting, how many runs you've finished and when you last dismissed the install offer (browser storage).</li>
       </ul>
 
       <h2>Gameplay statistics</h2>
-      <p>To learn how the game is played, it records a few gameplay events: <code>title_view</code>, <code>run_start</code>, <code>run_end</code>, <code>retry</code>, <code>share</code>, <code>install</code> and <code>update_applied</code>. Each carries game details only (such as time survived, eggs, score, whether the app is installed and the referring site's name), a random ID for the page visit, the game version, and your anonymous account ID if you have one. No other personal data is collected, and these statistics are never shown publicly or shared.</p>
+      <p>To learn how the game is played, it records a few gameplay events: <code>title_view</code>, <code>run_start</code>, <code>run_end</code>, <code>retry</code>, <code>share</code>, <code>install</code>, <code>install_prompt_shown</code>, <code>install_prompt_outcome</code> and <code>update_applied</code>. Each carries game details only (such as time survived, eggs, score, whether the app is installed, how the install offer was answered and the referring site's name), a random ID for the page visit, the game version, and your anonymous account ID if you have one. No other personal data is collected, and these statistics are never shown publicly or shared.</p>
 
       <h2>Where it lives</h2>
       <p>Data is stored with Supabase (database and sign-in) and the game is served by Vercel. We don't sell data, show ads or use tracking cookies.</p>

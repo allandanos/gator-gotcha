@@ -6,7 +6,15 @@ import { createEventQueue, uuidFromBytes, type EventBatch, type EventProps } fro
 import { browserStore, flushDecision, type SubmitStatus } from './pendingRuns';
 
 export type EventName =
-  'title_view' | 'run_start' | 'run_end' | 'retry' | 'share' | 'install' | 'update_applied';
+  | 'title_view'
+  | 'run_start'
+  | 'run_end'
+  | 'retry'
+  | 'share'
+  | 'install'
+  | 'install_prompt_shown'
+  | 'install_prompt_outcome'
+  | 'update_applied';
 type TokenProvider = () => Promise<string | null>;
 
 const ENDPOINT = '/api/events';

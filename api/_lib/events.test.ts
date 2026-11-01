@@ -86,6 +86,19 @@ describe('normalizeBatch', () => {
     expect(e?.props.referrer).toHaveLength(64);
   });
 
+  it('keeps only known install prompt kinds, places and outcomes', () => {
+    const out = norm([
+      ev('install_prompt_shown', { kind: 'ios_in_app', where: 'over' }),
+      ev('install_prompt_outcome', { kind: 'prompt', where: 'title', outcome: 'accepted' }),
+      ev('install_prompt_outcome', { kind: 'pwa', where: 'popup', outcome: 'maybe' }),
+    ]).events;
+    expect(out.map((e) => e.props)).toEqual([
+      { kind: 'ios_in_app', where: 'over' },
+      { kind: 'prompt', where: 'title', outcome: 'accepted' },
+      {},
+    ]);
+  });
+
   it('keeps only known share channels', () => {
     const out = norm([ev('share', { via: 'copy' }), ev('share', { via: 'myspace' })]).events;
     expect(out.map((e) => e.props)).toEqual([{ via: 'copy' }, {}]);

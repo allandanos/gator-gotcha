@@ -118,6 +118,21 @@
               <button id="retry-btn" class="btn btn--primary" type="button" data-autofocus>Retry this swamp</button>
               <button id="new-btn" class="btn" type="button">New swamp</button>
             </div>
+            <aside id="install-card" class="install-card" aria-labelledby="install-card-title" hidden>
+              <img class="install-card__icon" src="/icons/icon-192.png" width="44" height="44" alt="" />
+              <div class="install-card__text">
+                <p id="install-card-title" class="install-card__title">Play it like an app</p>
+                <p class="install-card__body" data-install-kind="prompt" hidden>Full screen, works offline, one tap from your home screen.</p>
+                <p class="install-card__body" data-install-kind="ios" hidden>Tap <svg class="install-card__glyph" viewBox="0 0 20 24" aria-label="Share" role="img"><path d="M10 15V2M5.5 6.5 10 2l4.5 4.5M6 10H3.5v12h13V10H14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> then <b>Add to Home Screen</b>.</p>
+                <p class="install-card__body" data-install-kind="ios_in_app" hidden>Tap <b>•••</b> then <b>Open in external browser</b> to add it to your Home Screen.</p>
+                <p class="install-card__body" data-install-kind="android_in_app" hidden>Open it in Chrome to install: full screen, works offline.</p>
+              </div>
+              <div class="install-card__actions">
+                <button id="install-card-btn" class="btn btn--small btn--install" type="button" hidden>Install</button>
+                <a id="install-card-open" class="btn btn--small btn--install" href="/" hidden>Open in Chrome</a>
+                <button id="install-card-dismiss" class="link-btn install-card__dismiss" type="button">Not now</button>
+              </div>
+            </aside>
             <p class="meta">Swamp <code id="over-seed"></code> <button id="copy-btn" class="link-btn" type="button">Copy link</button></p>
             <p class="meta meta--fine update-note" data-update-note hidden>New version ready · <button class="link-btn" type="button" data-update-btn>Update now</button></p>
           </div>

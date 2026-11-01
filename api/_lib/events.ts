@@ -26,6 +26,9 @@ const oneOf =
   (v) =>
     typeof v === 'string' && allowed.includes(v) ? v : undefined;
 
+const installKind = oneOf('prompt', 'ios', 'ios_in_app', 'android_in_app');
+const installWhere = oneOf('title', 'over');
+
 /** eggs × 100 + 1200 s × 10, the most a 20-minute run can score. */
 const MAX_SCORE = 10_000 * 100 + 1200 * 10;
 
@@ -37,6 +40,12 @@ const CATALOGUE: Readonly<Record<string, Readonly<Record<string, PropNormalizer>
   retry: {},
   share: { via: oneOf('facebook', 'copy') },
   install: {},
+  install_prompt_shown: { kind: installKind, where: installWhere },
+  install_prompt_outcome: {
+    kind: installKind,
+    where: installWhere,
+    outcome: oneOf('accepted', 'dismissed', 'opened', 'not_now'),
+  },
   update_applied: { from: str(40), to: str(40) },
 };
 

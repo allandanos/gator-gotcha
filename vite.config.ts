@@ -72,6 +72,7 @@ export default defineConfig({
         'src/ui/eventQueue.ts',
         'src/ui/bootSeed.ts',
         'src/ui/storage.ts',
+        'src/ui/installPolicy.ts',
         'api/_lib/**',
       ],
       exclude: ['src/core/loop.ts', '**/*.test.ts', '**/__fixtures__/**', 'api/_lib/repository.ts'],

@@ -1,10 +1,25 @@
 import { track } from './analytics';
 import { $ } from './dom';
+import {
+  androidIntentUrl,
+  detectInstallEnv,
+  shouldOfferInstall,
+  type InstallEnv,
+} from './installPolicy';
+import { bumpRunCount, loadInstallDismissedAt, saveInstallDismissedAt } from './storage';
 
 /** Chrome/Edge/Android's deferred install prompt (not yet in lib.dom). */
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
   readonly userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
+type Where = 'title' | 'over';
+type Outcome = 'accepted' | 'dismissed' | 'opened' | 'not_now';
+
+export interface InstallUi {
+  /** Call once per finished run, after the game-over screen is shown. */
+  onRunFinished(): void;
 }
 
 export function isStandalone(): boolean {
@@ -14,45 +29,93 @@ export function isStandalone(): boolean {
   );
 }
 
-/** iOS has no install prompt event, so Safari users get a one-line "Add to Home Screen" hint instead. */
-function isIosSafari(): boolean {
-  const ua = navigator.userAgent;
-  const ios =
-    /iPad|iPhone|iPod/.test(ua) || (ua.includes('Macintosh') && navigator.maxTouchPoints > 1);
-  return ios && /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|FBAN|FBAV|Instagram/.test(ua);
-}
+const outcome = (kind: InstallEnv, where: Where, result: Outcome) =>
+  track('install_prompt_outcome', { kind, where, outcome: result });
 
-/** Shows an "Install app" button (or an iOS hint) on the title screen when the game isn't installed yet. */
-export function setupInstall(): void {
-  if (isStandalone()) return;
-  const button = $<HTMLButtonElement>('#install-btn');
-  const hint = $('#install-hint');
-  const sep = $('#install-sep');
+/**
+ * Install surfaces: a fine-print link (or iOS hint) on the title screen, and from the second
+ * finished run a card on the game-over screen that matches what this browser can do. Never shown
+ * in the installed app.
+ */
+export function setupInstall(): InstallUi {
+  if (isStandalone()) return { onRunFinished: () => undefined };
+
+  const env = detectInstallEnv(navigator.userAgent, navigator.maxTouchPoints);
+  const titleBtn = $<HTMLButtonElement>('#install-btn');
+  const titleHint = $('#install-hint');
+  const titleSep = $('#install-sep');
+  const card = $('#install-card');
+  const cardBtn = $<HTMLButtonElement>('#install-card-btn');
+  const cardOpen = $<HTMLAnchorElement>('#install-card-open');
+  const bodies = card.querySelectorAll<HTMLElement>('[data-install-kind]');
   let deferred: BeforeInstallPromptEvent | null = null;
+  let shownKind: InstallEnv | null = null;
 
-  const show = (el: HTMLElement, visible: boolean) => {
+  const setTitle = (el: HTMLElement, visible: boolean) => {
     el.hidden = !visible;
-    sep.hidden = button.hidden && hint.hidden;
+    titleSep.hidden = titleBtn.hidden && titleHint.hidden;
+  };
+  const hideCard = () => {
+    card.hidden = true;
+  };
+  /** What the card can offer right now: the native prompt only once the browser has handed it over. */
+  const availableKind = (): InstallEnv | null =>
+    env !== 'prompt' ? env : deferred ? 'prompt' : null;
+
+  const showCard = (kind: InstallEnv) => {
+    bodies.forEach((el) => (el.hidden = el.dataset.installKind !== kind));
+    cardBtn.hidden = kind !== 'prompt';
+    cardOpen.hidden = kind !== 'android_in_app';
+    if (kind === 'android_in_app') cardOpen.href = androidIntentUrl(window.location.href);
+    card.hidden = false;
+    // One "shown" per page visit is enough to measure reach without an event per game over.
+    if (shownKind !== kind) track('install_prompt_shown', { kind, where: 'over' });
+    shownKind = kind;
   };
 
-  if (isIosSafari()) show(hint, true);
+  const runPrompt = async (where: Where) => {
+    if (!deferred) return;
+    const prompt = deferred;
+    deferred = null;
+    setTitle(titleBtn, false);
+    hideCard();
+    await prompt.prompt();
+    const { outcome: result } = await prompt.userChoice;
+    outcome('prompt', where, result);
+    if (result === 'dismissed') saveInstallDismissedAt(Date.now());
+  };
+
+  if (env === 'ios') setTitle(titleHint, true);
 
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferred = e as BeforeInstallPromptEvent;
-    show(button, true);
+    setTitle(titleBtn, true);
   });
   window.addEventListener('appinstalled', () => {
     track('install');
     deferred = null;
-    show(button, false);
+    setTitle(titleBtn, false);
+    hideCard();
   });
-  button.addEventListener('click', async () => {
-    if (!deferred) return;
-    const prompt = deferred;
-    deferred = null;
-    await prompt.prompt();
-    const { outcome } = await prompt.userChoice;
-    if (outcome === 'accepted') show(button, false);
+  titleBtn.addEventListener('click', () => void runPrompt('title'));
+  cardBtn.addEventListener('click', () => void runPrompt('over'));
+  cardOpen.addEventListener('click', () => outcome('android_in_app', 'over', 'opened'));
+  $('#install-card-dismiss').addEventListener('click', () => {
+    saveInstallDismissedAt(Date.now());
+    hideCard();
+    const kind = availableKind();
+    if (kind) outcome(kind, 'over', 'not_now');
   });
+
+  return {
+    onRunFinished() {
+      const runs = bumpRunCount();
+      const kind = availableKind();
+      const now = Date.now();
+      if (kind && shouldOfferInstall({ runs, dismissedAt: loadInstallDismissedAt(), now }))
+        showCard(kind);
+      else hideCard();
+    },
+  };
 }
