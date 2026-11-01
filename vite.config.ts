@@ -20,13 +20,15 @@ function appVersion(): string {
 export default defineConfig({
   base: '/',
   define: { __APP_VERSION__: JSON.stringify(appVersion()) },
+  // The privacy page is its own entry so its stylesheet is a same-origin file the CSP allows.
+  build: { rollupOptions: { input: { main: 'index.html', privacy: 'privacy.html' } } },
   plugins: [
     VitePWA({
       // 'prompt' keeps a downloaded update waiting until src/ui/updates.ts finds a moment that
       // can't interrupt a run. Registration lives in our own bundle, so no inline script.
       registerType: 'prompt',
       injectRegister: false,
-      includeAssets: ['icons/apple-touch-icon.png', 'privacy.html'],
+      includeAssets: ['icons/apple-touch-icon.png'],
       manifest: {
         name: 'Gator Gotcha',
         short_name: 'Gator Gotcha',

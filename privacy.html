@@ -5,20 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Privacy · Gator Gotcha</title>
     <meta name="description" content="What Gator Gotcha stores about players and how to delete it." />
-    <style>
-      :root { --ink: #24331c; --cream: #fff8e7; --grass: #8fd14f; }
-      body { margin: 0; background: var(--grass); color: var(--ink); font: 600 1rem/1.55 'Nunito', system-ui, sans-serif; }
-      main { max-width: 680px; margin: 32px auto; padding: 24px 28px; background: var(--cream); border: 3px solid var(--ink); border-radius: 24px; box-shadow: 8px 8px 0 var(--ink); }
-      @media (max-width: 720px) { main { margin: 16px; } }
-      h1 { margin-top: 0; font-size: 2rem; }
-      h2 { margin-top: 1.6em; font-size: 1.2rem; }
-      a { color: #2f7c3c; }
-    </style>
+    <meta name="theme-color" content="#2f9fc4" />
+    <link rel="icon" href="/icons/icon-192.png" type="image/png" />
+    <link rel="stylesheet" href="/src/privacy/privacy.css" />
   </head>
   <body>
     <main>
       <h1>Gator Gotcha privacy</h1>
-      <p>Last updated 1 November 2026.</p>
+      <p class="updated">Last updated 1 November 2026.</p>
 
       <h2>What we store</h2>
       <ul>
@@ -41,7 +35,7 @@
       <h2>Deleting your data</h2>
       <p>Open a request at <a href="https://github.com/allandanos/gator-gotcha/issues/new?title=Data%20deletion%20request">github.com/allandanos/gator-gotcha/issues</a> with your nickname (or, if connected, the name on your Facebook account) and we'll delete your account and scores within 30 days. If you connected Facebook, you can also remove the app under Facebook Settings → Apps and Websites.</p>
 
-      <p><a href="/">← Back to the swamp</a></p>
+      <a class="back" href="/">← Back to the swamp</a>
     </main>
   </body>
 </html>
