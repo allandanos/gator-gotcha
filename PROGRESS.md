@@ -3,7 +3,7 @@
 | date | phase | status | notes |
 |---|---|---|---|
 | 2026-11-01 | 0 | done | events live |
-| 2026-11-01 | modes | built, not deployed | egg rush, night swamp, campaign (out of band, before phase 1) |
+| 2026-11-01 | modes | on staging | egg rush, night swamp, campaign (out of band, before phase 1) |
 
 ## Evidence
 
@@ -43,10 +43,29 @@ daily-only-classic DB constraint, and an import order fix.
 players (median 2 eggs per run against 16 for people), so the seeds `lv01`–`lv12` **still need a
 human playtest**. If a level is unfair, swap its seed in `CAMPAIGN` and note it here.
 
+**Migration applied (owner, 2026-11-02):** `supabase db push --linked` applied `20261102000000_modes.sql`.
+Live read-only checks:
+- the legacy 3-arg `leaderboard()` returns the Classic board, so old clients work;
+- the Rush board exists and is empty;
+- all 106 existing scores read as `classic`.
+
+**Staging (Preview `gator-gotcha-4tiuoj8sd`, commit `8505002`):**
+- The Preview serves the Modes and Campaign screens and the board mode switch.
+- Via `vercel curl` with one anonymous test session:
+  - a bogus mode returns 400;
+  - the Rush run (`buzz36`, the deterministic evasive-bot log) returns 201 with score 500 and
+    Rush rank #1, no daily rank;
+  - the Night run (`golden`) returns 201 with score 310;
+  - resubmitting it returns 409;
+  - each score appeared only on its own board.
+- `/s/<id>` reads "Egg Rush: 0 eggs, survived 1:30", and its link carries `&mode=rush`.
+- The OG card says "scored in Egg Rush".
+- Test user `f6bc9607-b7ae-4f59-a8e7-a00a04978da6` (anonymous, created seconds before, these
+  2 scores only) was deleted by id, which cascaded. Both boards were empty again afterwards.
+
 **Owner actions before deploy:**
-1. Run `supabase db push --linked` (dry-run first). The migration must be live before the API
-   deploys, because the API inserts `mode`.
-2. Push `staging`, smoke-test the Preview, then `main`.
+1. ~~Run `supabase db push --linked`~~ done.
+2. ~~Push `staging` and smoke-test the Preview~~ done. Then push `main`.
 
 
 ### Phase 0
