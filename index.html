@@ -29,8 +29,9 @@
 
       <header id="hud" class="hud" hidden>
         <dl class="hud-stats">
-          <div class="chip chip--score"><dt>Score</dt><dd id="hud-score">0</dd></div>
+          <div id="hud-score-chip" class="chip chip--score"><dt>Score</dt><dd id="hud-score">0</dd></div>
           <div class="chip"><dt>Eggs</dt><dd id="hud-eggs">0</dd></div>
+          <div id="hud-goal-chip" class="chip chip--goal" hidden><dt id="hud-goal-label">Goal</dt><dd id="hud-goal">0</dd></div>
           <div id="hud-time-chip" class="chip"><dt id="hud-time-label">Time</dt><dd id="hud-time">0:00</dd></div>
         </dl>
         <div class="hud-right">
@@ -107,9 +108,48 @@
                   <span class="mode-card__best">Best <b data-mode-best="night">0</b></span>
                 </button>
               </li>
+            <li>
+              <button id="campaign-card" class="mode-card mode-card--campaign" type="button">
+                <span class="mode-card__icon"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M7 28V5m0 1h16l-4 5 4 5H7" fill="#ff5a4e" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/></svg></span>
+                <span class="mode-card__name">Campaign</span>
+                <span class="mode-card__rule">12 levels, 3 worlds. Earn stars to open the next swamp.</span>
+                <span class="mode-card__best">Stars <b id="campaign-card-stars">0</b> / <span data-max-stars>36</span></span>
+              </button>
+            </li>
           </ul>
           <div class="actions">
             <button id="modes-back-btn" class="btn" type="button">Back</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="screen-campaign" class="screen" aria-labelledby="campaign-heading" hidden>
+        <div class="card card--campaign">
+          <p class="eyebrow">Campaign</p>
+          <h2 id="campaign-heading" class="heading">The Swamp Trail</h2>
+          <p class="campaign-total" aria-live="polite"><span class="star-glyph" aria-hidden="true">★</span> <b id="campaign-stars">0</b> / <span data-max-stars>36</span> stars</p>
+          <div id="campaign-worlds" class="worlds"></div>
+          <div class="actions">
+            <button id="campaign-back-btn" class="btn" type="button">Back</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="screen-level" class="screen" aria-labelledby="level-heading" hidden>
+        <div class="card card--level">
+          <p id="level-eyebrow" class="eyebrow"></p>
+          <h2 id="level-heading" class="heading"></h2>
+          <ol id="level-stars" class="star-row" aria-label="Stars earned">
+            <li class="star-row__star"><span aria-hidden="true">★</span></li>
+            <li class="star-row__star"><span aria-hidden="true">★</span></li>
+            <li class="star-row__star"><span aria-hidden="true">★</span></li>
+          </ol>
+          <ul id="level-checks" class="level-checks"></ul>
+          <p id="level-unlock" class="level-unlock" role="status" hidden></p>
+          <div class="actions">
+            <button id="level-next-btn" class="btn btn--primary" type="button">Next level</button>
+            <button id="level-retry-btn" class="btn" type="button">Retry</button>
+            <button id="level-list-btn" class="btn" type="button">Levels</button>
           </div>
         </div>
       </section>

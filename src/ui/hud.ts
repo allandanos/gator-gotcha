@@ -19,6 +19,10 @@ export class Hud {
   private readonly time = $('#hud-time');
   private readonly timeChip = $('#hud-time-chip');
   private readonly timeLabel = $('#hud-time-label');
+  private readonly scoreChip = $('#hud-score-chip');
+  private readonly goalChip = $('#hud-goal-chip');
+  private readonly goalLabel = $('#hud-goal-label');
+  private readonly goal = $('#hud-goal');
   private readonly stamina = $('#hud-stamina');
   private readonly staminaFill = $('#hud-stamina-fill');
   private readonly status = $('#hud-status');
@@ -30,6 +34,7 @@ export class Hud {
     stamina: -1,
     exhausted: false,
     warn: false,
+    goal: '',
   };
 
   show(visible: boolean): void {
@@ -40,7 +45,19 @@ export class Hud {
   reset(w: World): void {
     this.timeLabel.textContent = w.rules.timeLimit === null ? 'Time' : 'Left';
     this.timeChip.classList.remove('chip--warn');
-    this.last = { ...this.last, time: '', warn: false };
+    // Campaign levels chase a goal, not a score.
+    const goal = w.rules.goal;
+    this.scoreChip.hidden = goal !== null;
+    this.goalChip.hidden = goal === null;
+    this.goalLabel.textContent = goal?.eggs !== undefined ? 'Goal' : 'Survive';
+    this.last = { ...this.last, time: '', warn: false, goal: '' };
+  }
+
+  private goalText(w: World): string {
+    const goal = w.rules.goal;
+    if (!goal) return '';
+    if (goal.eggs !== undefined) return `${Math.min(w.eggsCollected, goal.eggs)}/${goal.eggs}`;
+    return formatTime(Math.ceil(Math.max(0, (goal.surviveSec ?? 0) - w.time)));
   }
 
   update(w: World): void {
@@ -51,6 +68,8 @@ export class Hud {
     const time = left === null ? formatTime(w.time) : formatTime(Math.ceil(left));
     const warn = left !== null && left <= COUNTDOWN_WARN;
     if (warn !== this.last.warn) this.timeChip.classList.toggle('chip--warn', warn);
+    const goal = this.goalText(w);
+    if (goal !== this.last.goal) this.goal.textContent = goal;
     const stamina = Math.round((w.duck.stamina / DUCK.staminaMax) * 100) / 100;
     if (score !== this.last.score) this.score.textContent = score;
     if (eggs !== this.last.eggs) this.eggs.textContent = eggs;
@@ -73,6 +92,7 @@ export class Hud {
       stamina,
       exhausted: w.duck.exhausted,
       warn,
+      goal,
     };
   }
 }

@@ -1,10 +1,12 @@
 import { $ } from './dom';
 
-export type ScreenId = 'title' | 'modes' | 'pause' | 'over' | 'board';
+export type ScreenId = 'title' | 'modes' | 'campaign' | 'level' | 'pause' | 'over' | 'board';
 
 const IDS: Record<ScreenId, string> = {
   title: '#screen-title',
   modes: '#screen-modes',
+  campaign: '#screen-campaign',
+  level: '#screen-level',
   pause: '#screen-pause',
   over: '#screen-over',
   board: '#screen-board',

@@ -61,6 +61,15 @@ mode is replayed by the server and has its own leaderboard. The Daily Swamp is a
 
 Modes are `RunRules` values (`src/sim/rules.ts`); `?mode=rush|night` in the URL picks one.
 
+### Campaign
+
+12 curated levels in three worlds (Reed Shallows, Moonlit Marsh at 6 ★, Bayou Rush at 15 ★).
+Each level is a fixed seed plus rules: a goal (grab N eggs, or survive N seconds), sometimes a
+clock, night, or a higher starting difficulty. Clearing earns ★; the other two stars come from a
+par time, an egg count, or how rarely you were spotted. Within a world, clearing a level opens
+the next. Progress is local (`gator-gotcha:campaign` in localStorage) and unranked: campaign runs
+are never submitted. Levels live in `CAMPAIGN` in `src/config.ts`; logic in `src/sim/campaign.ts`.
+
 All tuning lives in [`src/config.ts`](src/config.ts).
 
 ## Online: leaderboards & sharing

@@ -43,6 +43,10 @@ start a second run. There is no reason to return tomorrow and no revenue path at
 
 ## 3. Phase overview
 
+> **Out of band (2026-11-01):** game modes shipped before Phase 1, at the owner's request: Egg Rush
+> and Night Swamp (ranked, one board each) and a 12-level local Campaign. Phase 1's KPI baseline
+> now includes mode play; filter `run_start.mode` when comparing with Phase 0 numbers.
+
 | # | Phase | Changes the sim? | Gate to move on |
 |---|---|---|---|
 | 0 | Measure: events + retention views | No | 7 days of event data queryable |

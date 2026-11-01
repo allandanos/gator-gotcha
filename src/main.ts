@@ -15,7 +15,8 @@ import { Effects } from './render/effects';
 import { Renderer } from './render/renderer';
 import { dequantizeInput, InputRecorder, quantizeInput } from './sim/input';
 import { dailyDateOf, dailySeed, encodeLog } from './sim/replay';
-import { MODE_LABELS, parseMode, rulesForMode, type ModeId } from './sim/rules';
+import type { Level } from './sim/campaign';
+import { MODE_LABELS, parseMode, rulesForMode, type ModeId, type RunRules } from './sim/rules';
 import { scoreOf } from './sim/scoring';
 import type { World } from './sim/types';
 import { createWorld, step } from './sim/world';
@@ -27,6 +28,7 @@ import {
   APP_VERSION,
 } from './ui/analytics';
 import { pickBootSeed } from './ui/bootSeed';
+import { CampaignUi } from './ui/campaign';
 import { $, formatTime, isTypingTarget } from './ui/dom';
 import { Hud } from './ui/hud';
 import { isStandalone, setupInstall } from './ui/install';
@@ -107,6 +109,8 @@ function boot(): void {
   let mode = bootMode(params);
   // A shared-score link pins its seed and mode; the banner applies only while playing exactly that.
   const challenge = params.get('challenge') ? { seed, mode } : null;
+  /** The campaign level being played, or null for a ranked run. */
+  let level: Level | null = null;
   let world: World = createWorld(seed, rulesForMode(mode));
   let prev = world;
   let phase: Phase = 'title';
@@ -147,22 +151,11 @@ function boot(): void {
     syncMute();
   };
 
-  const startRun = (nextSeed: string, nextMode: ModeId = mode) => {
-    audio.unlock();
-    const fromOver = phase === 'over';
-    if (fromOver) track('retry');
-    const daily = nextMode === 'classic' && nextSeed === dailySeed(new Date());
-    track('run_start', { seed: nextSeed, daily, fromOver, mode: nextMode });
-    seed = nextSeed;
-    mode = nextMode;
-    saveSeed(seed);
-    world = createWorld(seed, rulesForMode(mode));
+  const beginRun = (runSeed: string, rules: RunRules) => {
+    world = createWorld(runSeed, rules);
     prev = world;
     renderer.setMap(world.map);
     recorder.reset();
-    const isChallenge = challenge?.seed === seed && challenge.mode === mode;
-    if (!isChallenge) $('#challenge-banner').hidden = true;
-    window.history.replaceState(null, '', seedUrl(seed, mode, isChallenge));
     fx.reset();
     touch.reset();
     hud.reset(world);
@@ -171,6 +164,34 @@ function boot(): void {
     music.stop();
     music.start();
     phase = 'playing';
+  };
+
+  /** A ranked run: classic, rush or night. */
+  const startRun = (nextSeed: string, nextMode: ModeId = mode) => {
+    audio.unlock();
+    const fromOver = phase === 'over';
+    if (fromOver) track('retry');
+    const daily = nextMode === 'classic' && nextSeed === dailySeed(new Date());
+    track('run_start', { seed: nextSeed, daily, fromOver, mode: nextMode });
+    level = null;
+    seed = nextSeed;
+    mode = nextMode;
+    saveSeed(seed);
+    const isChallenge = challenge?.seed === seed && challenge.mode === mode;
+    if (!isChallenge) $('#challenge-banner').hidden = true;
+    window.history.replaceState(null, '', seedUrl(seed, mode, isChallenge));
+    beginRun(seed, rulesForMode(mode));
+  };
+
+  /** A campaign level: local and unranked, so the ranked seed, URL and bests stay as they were. */
+  const startLevel = (next: Level) => {
+    audio.unlock();
+    const fromOver = phase === 'over';
+    if (fromOver) track('retry');
+    track('run_start', { seed: next.seed, daily: false, fromOver, mode: 'campaign', level: next.id });
+    level = next;
+    $('#challenge-banner').hidden = true;
+    beginRun(next.seed, next.rules);
   };
 
   const pause = () => {
@@ -189,8 +210,21 @@ function boot(): void {
     phase = 'playing';
   };
 
+  const finishLevel = (played: Level) => {
+    hud.show(false);
+    const { stars } = campaign.finish(played, world);
+    const outcome = world.status === 'playing' ? 'caught' : world.status;
+    track('level_end', { level: played.id, cleared: outcome === 'cleared', stars, outcome });
+    track('run_end', { sec: world.time, eggs: world.eggsCollected, score: 0, mode: 'campaign', level: played.id });
+    void flushEvents();
+  };
+
   const finish = () => {
     phase = 'over';
+    if (level) {
+      finishLevel(level);
+      return;
+    }
     const score = scoreOf(world);
     const previousBest = loadBest(mode);
     const isNewBest = score > previousBest;
@@ -260,8 +294,14 @@ function boot(): void {
   );
   const openModes = () => {
     modes.prepare(mode);
+    $('#campaign-card-stars').textContent = String(campaign.totalStars());
     showScreen('modes');
   };
+  const campaign = new CampaignUi({ show: showScreen, play: startLevel, back: openModes });
+  $('#campaign-card').addEventListener('click', () => {
+    track('mode_select', { mode: 'campaign' });
+    campaign.open();
+  });
   $('#modes-btn').addEventListener('click', openModes);
   $('#title-board-btn').addEventListener('click', () => void online.openBoard('title', mode));
   $('#over-board-btn').addEventListener('click', () => void online.openBoard('over', mode));
@@ -269,6 +309,7 @@ function boot(): void {
   $('#resume-btn').addEventListener('click', resume);
   $('#quit-btn').addEventListener('click', () => {
     phase = 'title';
+    level = null;
     hud.show(false);
     showTitle();
     updates.maybeApply();
@@ -296,13 +337,18 @@ function boot(): void {
       closeBoard();
     } else if (e.code === 'Escape' && !$('#screen-modes').hidden) {
       showTitle();
+    } else if (e.code === 'Escape' && !$('#screen-campaign').hidden) {
+      openModes();
+    } else if (e.code === 'Escape' && !$('#screen-level').hidden) {
+      campaign.open(level?.id);
     } else if (e.code === 'Escape' || e.code === 'KeyP') {
       if (phase === 'playing') pause();
       else if (phase === 'paused') resume();
     } else if (e.code === 'KeyM') {
       toggleMute();
     } else if (e.code === 'Enter' && !(e.target instanceof HTMLButtonElement) && !boardOpen()) {
-      if (phase === 'title' || phase === 'over') startRun(seed);
+      if (phase === 'over' && level) startLevel(level);
+      else if (phase === 'title' || phase === 'over') startRun(seed);
     }
   });
   document.addEventListener('visibilitychange', () => {

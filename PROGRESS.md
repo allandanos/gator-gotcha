@@ -3,8 +3,51 @@
 | date | phase | status | notes |
 |---|---|---|---|
 | 2026-11-01 | 0 | done | events live |
+| 2026-11-01 | modes | built, not deployed | egg rush, night swamp, campaign (out of band, before phase 1) |
 
 ## Evidence
+
+### Modes (out of band)
+
+**What:** `RunRules` per run (`src/sim/rules.ts`). Ranked modes `classic` / `rush` / `night`,
+each replayed by the server with its own board (migration `20261102000000_modes.sql`). A local,
+unranked 12-level campaign.
+
+**Classic unchanged:**
+- The golden replay snapshot was untouched.
+- A full-world-state sha256 over 40 bot runs (every tick) was
+  `2907f8e7ce704df96c5f35e3102be40813792dd295725a1c36e999f15231efd7` both before and after the
+  rules change.
+
+**Migration:** applied to a throwaway `postgres:17-alpine` with stubbed `auth` and roles. Checks:
+- the legacy 3-arg `leaderboard()` call returns Classic only;
+- `mode => 'rush'` returns only Rush rows;
+- the `mode` check rejects `campaign`;
+- `scores_daily_classic_only` rejects a Rush row that carries a `daily_date`.
+
+**Security review (§5.4):** no CRITICAL, HIGH or MEDIUM findings. Two LOW notes were applied: the
+daily-only-classic DB constraint, and an import order fix.
+
+**Browser (dev server, Chrome via Playwright, Supabase and `/api` blocked):**
+- Modes screen at 1440 and 375.
+- Rush counts down, and the chip turns urgent under 10 s. At 0:00 the card shows "Time!" with
+  +500, the score is 500 with 0 eggs, and focus is on `#retry-btn`.
+- Night fog renders.
+- Campaign:
+  - level 1 cleared with 3★ unlocks Moonlit Marsh at 6★;
+  - a caught run shows CHOMP! with Retry focused and Next hidden;
+  - a campaign run submits nothing and leaves the Classic best untouched;
+  - no horizontal overflow at 375.
+
+**Level feasibility:** scripted bots clear levels 1, 3 and 5 easily. The bots are far weaker than
+players (median 2 eggs per run against 16 for people), so the seeds `lv01`–`lv12` **still need a
+human playtest**. If a level is unfair, swap its seed in `CAMPAIGN` and note it here.
+
+**Owner actions before deploy:**
+1. Run `supabase db push --linked` (dry-run first). The migration must be live before the API
+   deploys, because the API inserts `mode`.
+2. Push `staging`, smoke-test the Preview, then `main`.
+
 
 ### Phase 0
 
