@@ -3,7 +3,7 @@
 | date | phase | status | notes |
 |---|---|---|---|
 | 2026-11-01 | 0 | done | events live |
-| 2026-11-01 | modes | on staging | egg rush, night swamp, campaign (out of band, before phase 1) |
+| 2026-11-02 | modes | live |  egg rush, night swamp, campaign (out of band, before phase 1) |
 
 ## Evidence
 
@@ -65,7 +65,7 @@ Live read-only checks:
 
 **Owner actions before deploy:**
 1. ~~Run `supabase db push --linked`~~ done.
-2. ~~Push `staging` and smoke-test the Preview~~ done. Then push `main`.
+2. ~~Push `staging` and smoke-test the Preview~~ done. ~~Push `main`~~ done: production deploy `gator-gotcha-nashpk9ws` (commit `647fe77`) is live, serving the Modes/Campaign markup; the classic board answers old-style calls.
 
 
 ### Phase 0
