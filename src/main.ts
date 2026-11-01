@@ -307,13 +307,17 @@ function boot(): void {
   $('#over-board-btn').addEventListener('click', () => void online.openBoard('over', mode));
   $('#board-back-btn').addEventListener('click', closeBoard);
   $('#resume-btn').addEventListener('click', resume);
-  $('#quit-btn').addEventListener('click', () => {
+  /** Back to the title, where the mode is picked; the run, if any, is abandoned. */
+  const goToTitle = () => {
     phase = 'title';
     level = null;
     hud.show(false);
     showTitle();
     updates.maybeApply();
-  });
+  };
+  $('#quit-btn').addEventListener('click', goToTitle);
+  $('#over-menu-btn').addEventListener('click', goToTitle);
+  $('#level-menu-btn').addEventListener('click', goToTitle);
   $('#retry-btn').addEventListener('click', () => startRun(seed));
   $('#new-btn').addEventListener('click', () => startRun(randomSeed()));
   $('#pause-btn').addEventListener('click', pause);
@@ -341,6 +345,8 @@ function boot(): void {
       openModes();
     } else if (e.code === 'Escape' && !$('#screen-level').hidden) {
       campaign.open(level?.id);
+    } else if (e.code === 'Escape' && !$('#screen-over').hidden) {
+      goToTitle();
     } else if (e.code === 'Escape' || e.code === 'KeyP') {
       if (phase === 'playing') pause();
       else if (phase === 'paused') resume();
