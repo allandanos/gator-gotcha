@@ -83,18 +83,18 @@ describe('submitScore', () => {
 
   it('keeps the daily board classic-only', async () => {
     const seed = dailySeed(NOW);
-    const night = recordBotRun(seed, 5, rulesForMode('night'));
+    const dash = recordBotRun(seed, 5, rulesForMode('ducklings'));
     const { repo, inserted } = fakeRepo();
-    const out = await submitScore(repo, 'good', { ruleset: RULESET, seed, log: encodeLog(night.log), mode: 'night' }, NOW);
+    const out = await submitScore(repo, 'good', { ruleset: RULESET, seed, log: encodeLog(dash.log), mode: 'ducklings' }, NOW);
     expect(out.ok && out.result.dailyRank).toBeNull();
-    expect(inserted[0]).toMatchObject({ mode: 'night', dailyDate: null });
+    expect(inserted[0]).toMatchObject({ mode: 'ducklings', dailyDate: null, banked: dash.banked });
   });
 
   it('does not treat the same log in another mode as a duplicate', async () => {
-    const night = recordBotRun('golden', 3, rulesForMode('night'));
+    const dash = recordBotRun('golden', 3, rulesForMode('ducklings'));
     const { repo, inserted } = fakeRepo();
-    const log = encodeLog(night.log);
-    const a = await submitScore(repo, 'good', { ruleset: RULESET, seed: 'golden', log, mode: 'night' }, NOW);
+    const log = encodeLog(dash.log);
+    const a = await submitScore(repo, 'good', { ruleset: RULESET, seed: 'golden', log, mode: 'ducklings' }, NOW);
     const b = await submitScore(repo, 'good', { ruleset: RULESET, seed: 'golden', log, mode: 'classic' }, NOW);
     expect(a.ok).toBe(true);
     // Classic replays the same log to its own (possibly identical) result; either way it's a new row.
@@ -102,7 +102,7 @@ describe('submitScore', () => {
     expect(new Set(inserted.map((r) => r.inputHash)).size).toBe(inserted.length);
   });
 
-  it('scopes the duplicate hash to the ruleset, so a new season never collides with an old run', async () => {
+  it('scopes the duplicate hash to the ruleset, so a new ruleset never collides with an old run', async () => {
     const { createHash } = await import('node:crypto');
     const { repo, inserted } = fakeRepo();
     await submitScore(repo, 'good', body, NOW);
@@ -110,20 +110,17 @@ describe('submitScore', () => {
     expect(inserted[0]?.inputHash).toBe(hash);
   });
 
-  it('stores the ruleset and ranks on the current season', async () => {
-    const seasons: number[] = [];
-    const { repo, inserted } = fakeRepo({
-      rankFor: async (_board, _day, _mode, season) => (seasons.push(season), 3),
-    });
+  it('stores the ruleset with the run', async () => {
+    const { repo, inserted } = fakeRepo();
     await submitScore(repo, 'good', body, NOW);
     expect(inserted[0]?.ruleset).toBe(RULESET);
-    expect(seasons).toEqual([RULESET]);
   });
 
   it.each([
     ['a stale ruleset', { ...body, ruleset: RULESET - 1 }],
     ['a future ruleset', { ...body, ruleset: RULESET + 1 }],
-    ['no ruleset (clients from before seasons)', { seed: body.seed, log: body.log }],
+    ['no ruleset (clients from before rulesets)', { seed: body.seed, log: body.log }],
+    ['a stale client still offering Night Swamp', { seed: body.seed, log: body.log, mode: 'night' }],
   ])('answers 409 "please reload" for %s, before replaying anything', async (_name, payload) => {
     const { repo, inserted } = fakeRepo();
     const out = await submitScore(repo, 'good', payload, NOW);
@@ -133,6 +130,7 @@ describe('submitScore', () => {
 
   it.each([
     ['unknown mode', 'good', { ...body, mode: 'campaign' }, 400],
+    ['retired mode on the current ruleset', 'good', { ...body, mode: 'night' }, 400],
     ['non-string mode', 'good', { ...body, mode: 2 }, 400],
     ['non-integer ruleset', 'good', { ...body, ruleset: 1.5 }, 400],
     ['missing token', null, body, 401],

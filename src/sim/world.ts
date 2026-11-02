@@ -1,6 +1,7 @@
 import { ARENA, DUCK, EGGS, GATOR, GOLDEN, NEST, SNAP } from '../config.js';
 import { hashSeed, Rng } from '../core/rng.js';
 import { angleOf, dist, sub, type Vec } from '../core/vec.js';
+import { isNightAt } from './cycle.js';
 import { gatorStats } from './difficulty.js';
 import { createDuck, updateDuck } from './duck.js';
 import { createGator, snoutOf, updateGator } from './gator.js';
@@ -23,9 +24,9 @@ function spawnEgg(
   gator: Vec,
   others: readonly Egg[],
 ): Egg {
-  const season1 = w.rules.ducklings;
-  // Rolled only under Season 1 rules, so other modes draw exactly the same random numbers.
-  const golden = season1 && !others.some((e) => e.golden) && rng.chance(GOLDEN.chance);
+  const ducklingRules = w.rules.ducklings;
+  // Rolled only under Duckling Dash rules, so other modes draw exactly the same random numbers.
+  const golden = ducklingRules && !others.some((e) => e.golden) && rng.chance(GOLDEN.chance);
   let pos: Vec = w.map.duckSpawn;
   for (let i = 0; i < EGG_SPAWN_TRIES; i++) {
     pos = {
@@ -36,7 +37,7 @@ function spawnEgg(
       isOpen(w.map, pos, EGGS.radius + 8) &&
       dist(pos, duck) >= EGGS.minDistFromDuck &&
       dist(pos, gator) >= EGGS.minDistFromGator &&
-      (!season1 || dist(pos, w.nest) >= NEST.eggClearance) &&
+      (!ducklingRules || dist(pos, w.nest) >= NEST.eggClearance) &&
       others.every((e) => dist(e.pos, pos) >= EGG_MIN_SPACING)
     ) {
       break;
@@ -122,7 +123,7 @@ interface Pickups {
   readonly goldenEggs: number;
 }
 
-/** Eggs the duck touched this step; under Season 1 they hatch onto the trail. */
+/** Eggs the duck touched this step; under Duckling Dash rules they hatch onto the trail. */
 function collectEggs(w: World, duck: Duck, ducklings: readonly Vec[], events: GameEvent[]): Pickups {
   const picked = w.eggs.filter((e) => dist(e.pos, duck.pos) < EGGS.radius + DUCK.radius);
   let trail = ducklings;
@@ -157,22 +158,25 @@ export function step(w: World, input: InputState, dt: number): World {
   if (w.status !== 'playing') return w.events.length ? { ...w, events: [] } : w;
   const rng = new Rng(w.rngState);
   const events: GameEvent[] = [];
-  const season1 = w.rules.ducklings;
+  const ducklingRules = w.rules.ducklings;
 
   const duck = updateDuck(w.duck, input, w.map.obstacles, dt);
   if (duck.sprinting && !w.duck.sprinting) events.push({ type: 'sprintStart' });
-  const trailHistory = season1 ? pushHistory(w.trailHistory, duck.pos) : w.trailHistory;
-  const followed = season1 ? followTrail(w.ducklings, trailHistory, duck.pos, duck.facing) : w.ducklings;
+  const trailHistory = ducklingRules ? pushHistory(w.trailHistory, duck.pos) : w.trailHistory;
+  const followed = ducklingRules ? followTrail(w.ducklings, trailHistory, duck.pos, duck.facing) : w.ducklings;
 
   const pickups = collectEggs(w, duck, followed, events);
   const remaining = w.eggs.filter((e) => !pickups.picked.includes(e));
   const eggsCollected = w.eggsCollected + pickups.picked.length;
   const time = w.time + dt;
+  if (w.rules.dayNight && isNightAt(w.rules, time) !== isNightAt(w.rules, w.time)) {
+    events.push({ type: isNightAt(w.rules, time) ? 'nightfall' : 'daybreak' });
+  }
 
   let ducklings = pickups.ducklings;
   let banked = w.banked;
   let bankedDucklings = w.bankedDucklings;
-  if (season1 && ducklings.length > 0 && dist(duck.pos, w.nest) <= NEST.radius) {
+  if (ducklingRules && ducklings.length > 0 && dist(duck.pos, w.nest) <= NEST.radius) {
     const value = bankValue(ducklings.length);
     events.push({ type: 'banked', pos: w.nest, count: ducklings.length, value });
     banked += value;

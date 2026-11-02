@@ -6,8 +6,13 @@ export function bankValue(n: number): number {
   return Math.round(BANK.base * n * (1 + BANK.growth * n));
 }
 
-/** Season 1 score: whatever was banked, plus survival time. Unbanked ducklings are worth nothing. */
-export function computeScore(banked: number, time: number): number {
+/** Classic score: eggs plus survival time. */
+export function computeScore(eggs: number, time: number): number {
+  return eggs * SCORE.perEgg + Math.floor(time) * SCORE.perSecond;
+}
+
+/** Duckling Dash score: whatever was banked, plus survival time. Unbanked ducklings are worth nothing. */
+export function bankedScore(banked: number, time: number): number {
   return banked + Math.floor(time) * SCORE.perSecond;
 }
 
@@ -18,5 +23,5 @@ export function scoreOf(
   if (w.rules.scoring === 'rush') {
     return w.eggsCollected * SCORE.perEgg + (w.status === 'timeUp' ? MODES.rush.clutchBonus : 0);
   }
-  return computeScore(w.banked, w.time);
+  return w.rules.ducklings ? bankedScore(w.banked, w.time) : computeScore(w.eggsCollected, w.time);
 }

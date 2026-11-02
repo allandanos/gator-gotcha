@@ -37,6 +37,9 @@ function toLevel(spec: LevelSpec, index: number): Level {
     ...CLASSIC,
     ...(spec.night ? NIGHT_RULES : {}),
     mode: 'campaign',
+    // Night levels are fixed night; duckling levels are the ones with a banking goal.
+    dayNight: false,
+    ducklings: spec.goal.ducklings !== undefined,
     goal: spec.goal,
     timeLimit: spec.timeLimit ?? null,
     startLevel: spec.startLevel ?? 0,

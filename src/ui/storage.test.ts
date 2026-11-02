@@ -125,43 +125,30 @@ describe('install offer memory', () => {
 });
 
 describe('per-mode best and last mode', () => {
-  it('keeps Rush on its pre-season key and other modes apart', () => {
-    const storage = memoryStorage({ 'gator-gotcha:best:rush': '700' });
+  it('keeps classic on the original key and other modes apart', () => {
+    const storage = memoryStorage({ 'gator-gotcha:best': '1200' });
     vi.stubGlobal('window', { localStorage: storage });
-    expect(loadBest('rush')).toBe(700);
-    expect(loadBest('night')).toBe(0);
+    expect(loadBest('classic')).toBe(1200);
+    expect(loadBest('rush')).toBe(0);
     saveBest('rush', 900.7);
     expect(loadBest('rush')).toBe(900);
+    expect(loadBest('classic')).toBe(1200);
     expect(storage.getItem('gator-gotcha:best:rush')).toBe('900');
-  });
-
-  it('starts Season 1 bests fresh for modes whose scoring changed, leaving Season 0 bests alone', () => {
-    const storage = memoryStorage({
-      'gator-gotcha:best': '5200',
-      'gator-gotcha:best:night': '3100',
-      'gator-gotcha:best-timeline': '[400]',
-    });
-    vi.stubGlobal('window', { localStorage: storage });
-    expect(loadBest('classic')).toBe(0);
-    expect(loadBest('night')).toBe(0);
-    expect(loadBestTimeline('classic')).toEqual([]);
-    saveBest('classic', 860);
-    saveBestTimeline('classic', [200]);
-    expect(storage.getItem('gator-gotcha:best:s1')).toBe('860');
-    expect(storage.getItem('gator-gotcha:best-timeline:s1')).toBe('[200]');
-    expect(storage.getItem('gator-gotcha:best')).toBe('5200');
   });
 
   it('remembers the last ranked mode and ignores junk', () => {
     vi.stubGlobal('window', { localStorage: memoryStorage({ 'gator-gotcha:mode': 'turbo' }) });
     expect(loadMode()).toBe('classic');
-    saveMode('night');
-    expect(loadMode()).toBe('night');
+    saveMode('ducklings');
+    expect(loadMode()).toBe('ducklings');
+    // Night Swamp was folded into Classic: a stale saved choice falls back to it.
+    vi.stubGlobal('window', { localStorage: memoryStorage({ 'gator-gotcha:mode': 'night' }) });
+    expect(loadMode()).toBe('classic');
   });
 
   it('falls back when storage is blocked', () => {
     vi.stubGlobal('window', throwing);
-    expect(loadBest('night')).toBe(0);
+    expect(loadBest('ducklings')).toBe(0);
     expect(loadMode()).toBe('classic');
     expect(() => saveMode('rush')).not.toThrow();
   });
@@ -174,11 +161,11 @@ describe('pace and hints', () => {
     saveBestTimeline('rush', [0, 300]);
     expect(loadBestTimeline('classic')).toEqual([100, 250]);
     expect(loadBestTimeline('rush')).toEqual([0, 300]);
-    expect(loadBestTimeline('night')).toEqual([]);
+    expect(loadBestTimeline('ducklings')).toEqual([]);
   });
 
   it('rejects a corrupt or oversized timeline', () => {
-    const key = 'gator-gotcha:best-timeline:s1';
+    const key = 'gator-gotcha:best-timeline';
     for (const bad of ['{', '"x"', '[1,"2"]', '[-1]', JSON.stringify(Array(121).fill(1))]) {
       vi.stubGlobal('window', { localStorage: memoryStorage({ [key]: bad }) });
       expect(loadBestTimeline('classic')).toEqual([]);

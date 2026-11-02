@@ -13,8 +13,7 @@ import type { ScreenId } from './screens';
 import { hasStoredSession, loadNickname, saveNickname } from './storage';
 
 type OnlineModule = typeof import('../online');
-/** `season0` is the archive: the all-time board of the rules before seasons. */
-type Board = 'all' | 'daily' | 'season0';
+type Board = 'all' | 'daily';
 
 const ONLINE_CONFIGURED = Boolean(
   import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY,
@@ -63,8 +62,6 @@ export class OnlineUi {
   private readonly boardStatus = $('#board-status');
   private readonly tabAll = $<HTMLButtonElement>('#tab-all');
   private readonly tabDaily = $<HTMLButtonElement>('#tab-daily');
-  private readonly tabSeason0 = $<HTMLButtonElement>('#tab-season0');
-  private readonly boardSeason = $('#board-season');
   private readonly modeBtns = [...document.querySelectorAll<HTMLButtonElement>('[data-board-mode]')];
 
   constructor(
@@ -83,7 +80,6 @@ export class OnlineUi {
     });
     this.tabAll.addEventListener('click', () => void this.renderBoard('all'));
     this.tabDaily.addEventListener('click', () => void this.renderBoard('daily'));
-    this.tabSeason0.addEventListener('click', () => void this.renderBoard('season0'));
     for (const btn of this.modeBtns) {
       btn.addEventListener('click', () => {
         const mode = MODE_IDS.find((m) => m === btn.dataset.boardMode) ?? 'classic';
@@ -277,8 +273,7 @@ export class OnlineUi {
     if (!ONLINE_CONFIGURED) return;
     this.backTo = from;
     this.boardMode = mode;
-    // Open on the current season; the Hall of Fame is a tab you choose each time.
-    if (this.tab === 'season0' || (mode !== 'classic' && this.tab === 'daily')) this.tab = 'all';
+    if (mode !== 'classic' && this.tab === 'daily') this.tab = 'all';
     this.show('board');
     await this.renderBoard(this.tab);
   }
@@ -292,8 +287,6 @@ export class OnlineUi {
     this.tab = tab;
     this.tabAll.setAttribute('aria-selected', String(tab === 'all'));
     this.tabDaily.setAttribute('aria-selected', String(tab === 'daily'));
-    this.tabSeason0.setAttribute('aria-selected', String(tab === 'season0'));
-    this.boardSeason.textContent = tab === 'season0' ? 'Season 0 Hall of Fame' : `Season ${RULESET}`;
     // The Daily Swamp is classic-only, so "Today" exists only on the classic board.
     this.tabDaily.hidden = mode !== 'classic';
     for (const btn of this.modeBtns) btn.setAttribute('aria-pressed', String(btn.dataset.boardMode === mode));
@@ -302,9 +295,7 @@ export class OnlineUi {
     try {
       const online = await this.load();
       const [rows, me] = await Promise.all([
-        tab === 'season0'
-          ? online.fetchBoard('all', null, mode, 0)
-          : online.fetchBoard(tab, tab === 'daily' ? this.todayIso() : null, mode),
+        online.fetchBoard(tab, tab === 'daily' ? this.todayIso() : null, mode),
         online.currentUserId(),
       ]);
       if (this.tab !== tab || this.boardMode !== mode) return;

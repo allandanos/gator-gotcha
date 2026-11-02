@@ -79,11 +79,11 @@ describe('share page', () => {
     expect(html).toContain('/?seed=abc123&#38;challenge=11111111-1111-4111-8111-111111111111&#38;mode=rush');
   });
 
-  it('says how many ducklings a Season 1 run banked', () => {
+  it('says how many ducklings a Duckling Dash run banked', () => {
     const html = renderSharePage('https://g.example', {
       id: '11111111-1111-4111-8111-111111111111',
       seed: 'abc123',
-      mode: 'classic',
+      mode: 'ducklings',
       ruleset: 1,
       dailyDate: null,
       score: 2640,
@@ -92,6 +92,6 @@ describe('share page', () => {
       ticks: 3600,
       nickname: 'Duck',
     });
-    expect(html).toContain('banked 12 ducklings, survived 1:00');
+    expect(html).toContain('Duckling Dash: banked 12 ducklings, survived 1:00');
   });
 });

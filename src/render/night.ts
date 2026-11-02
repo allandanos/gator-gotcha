@@ -17,14 +17,17 @@ const EYE_FORWARD = 2.05;
 const EYE_SIDE = 0.42;
 
 /** Darkness everywhere but a soft lantern pool around the duck. Draw in world space. */
-export function drawNightFog(ctx: Ctx, duck: Vec, t: number): void {
+export function drawNightFog(ctx: Ctx, duck: Vec, t: number, alpha = 1): void {
   const r = MODES.night.lanternRadius * (1 + Math.sin(t * 3) * 0.02);
   const fog = ctx.createRadialGradient(duck.x, duck.y, r * 0.45, duck.x, duck.y, r);
   fog.addColorStop(0, 'rgba(10, 18, 40, 0)');
   fog.addColorStop(0.6, DUSK);
   fog.addColorStop(1, DARK);
+  ctx.save();
+  ctx.globalAlpha = alpha;
   ctx.fillStyle = fog;
   ctx.fillRect(-FOG_EXTENT, -FOG_EXTENT, FOG_EXTENT * 3, FOG_EXTENT * 3);
+  ctx.restore();
 }
 
 /** Whether the gator is close enough to the lantern for its cone to be hinted. */

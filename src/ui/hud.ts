@@ -1,4 +1,5 @@
 import { DUCK } from '../config';
+import { secondsToDawn, secondsToNight } from '../sim/cycle';
 import { bankValue, scoreOf } from '../sim/scoring';
 import type { GatorMode, World } from '../sim/types';
 import { HINT_MS } from '../render/feel';
@@ -12,6 +13,20 @@ const STATUS: Record<GatorMode, string> = {
 };
 /** Seconds left at which a countdown turns urgent. */
 const COUNTDOWN_WARN = 10;
+
+/** Seconds of day left at which Classic warns that night is coming. */
+const NIGHT_WARN = 5;
+
+/**
+ * Classic's day/night cue: "Night in 5" at dusk, then "Dawn 0:12" until the night ends.
+ * Null hides the chip (daytime, or rules without a cycle).
+ */
+export function nightCue(rules: World['rules'], time: number): { label: string; value: string } | null {
+  const toNight = secondsToNight(rules, time);
+  if (toNight !== null) return toNight <= NIGHT_WARN ? { label: 'Night', value: `in ${Math.ceil(toNight)}` } : null;
+  const toDawn = secondsToDawn(rules, time);
+  return toDawn === null ? null : { label: 'Dawn', value: formatTime(Math.ceil(toDawn)) };
+}
 
 /** "×4 → +560": what banking the trail right now would pay. */
 export function carryText(n: number): string {
@@ -28,6 +43,9 @@ export class Hud {
   private readonly carry = $('#hud-carry');
   private readonly bankedChip = $('#hud-banked-chip');
   private readonly banked = $('#hud-banked');
+  private readonly nightChip = $('#hud-night-chip');
+  private readonly nightLabel = $('#hud-night-label');
+  private readonly night = $('#hud-night');
   private readonly time = $('#hud-time');
   private readonly timeChip = $('#hud-time-chip');
   private readonly timeLabel = $('#hud-time-label');
@@ -49,6 +67,7 @@ export class Hud {
     eggs: '',
     carry: '',
     banked: '',
+    night: '',
     time: '',
     mode: '',
     stamina: -1,
@@ -72,12 +91,13 @@ export class Hud {
     this.goalChip.hidden = goal === null;
     this.goalLabel.textContent =
       goal?.ducklings !== undefined ? 'Bank' : goal?.eggs !== undefined ? 'Goal' : 'Survive';
-    // Season 1 shows the trail and the bank; Egg Rush still counts eggs.
-    const s1 = w.rules.ducklings;
-    this.eggsChip.hidden = s1;
-    this.carryChip.hidden = !s1;
-    this.bankedChip.hidden = !s1 || goal !== null;
-    this.last = { ...this.last, time: '', warn: false, goal: '', pace: '', carry: '', banked: '' };
+    // Duckling rules show the trail and the bank; other modes count eggs.
+    const dash = w.rules.ducklings;
+    this.eggsChip.hidden = dash;
+    this.carryChip.hidden = !dash;
+    this.bankedChip.hidden = !dash || goal !== null;
+    this.last = { ...this.last, time: '', warn: false, goal: '', pace: '', carry: '', banked: '', night: '' };
+    this.nightChip.hidden = true;
     this.paceChip.hidden = true;
     this.clearHints();
   }
@@ -152,6 +172,15 @@ export class Hud {
     const banked = String(w.bankedDucklings);
     if (banked !== this.last.banked) this.banked.textContent = banked;
     if (time !== this.last.time) this.time.textContent = time;
+    const cue = nightCue(w.rules, w.time);
+    const night = cue ? `${cue.label}:${cue.value}` : '';
+    if (night !== this.last.night) {
+      this.nightChip.hidden = !cue;
+      if (cue) {
+        this.nightLabel.textContent = cue.label;
+        this.night.textContent = cue.value;
+      }
+    }
     if (stamina !== this.last.stamina) {
       this.staminaFill.style.transform = `scaleX(${stamina})`;
       this.stamina.setAttribute('aria-valuenow', String(Math.round(stamina * 100)));
@@ -168,6 +197,7 @@ export class Hud {
       eggs,
       carry,
       banked,
+      night,
       time,
       mode: w.gator.mode,
       stamina,

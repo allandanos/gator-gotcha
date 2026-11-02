@@ -1,14 +1,15 @@
 import type { GameEvent } from '../sim/types';
 
-type HintTrigger = 'spotted' | 'sprintStart' | 'pickup';
+type HintTrigger = 'spotted' | 'sprintStart' | 'pickup' | 'nightfall';
 
 /** Bit order is stored in `gator-gotcha:hints-seen`; append only. */
-const ORDER: readonly HintTrigger[] = ['spotted', 'sprintStart', 'pickup'];
+const ORDER: readonly HintTrigger[] = ['spotted', 'sprintStart', 'pickup', 'nightfall'];
 
 export const HINT_TEXT: Readonly<Record<HintTrigger, string>> = {
   spotted: 'Break line of sight behind logs and reeds',
   sprintStart: 'Dash drains stamina; it refills when you walk',
   pickup: 'Splashes are loud: the gator hears pickups',
+  nightfall: 'Night falls: the gator sees less but hears more',
 };
 
 export interface DueHints {

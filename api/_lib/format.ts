@@ -17,13 +17,12 @@ export const formatScore = (n: number): string => n.toLocaleString('en-US');
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
-type Haul = Pick<SharedScore, 'mode' | 'ruleset' | 'eggs' | 'banked'>;
+type Haul = Pick<SharedScore, 'mode' | 'eggs' | 'banked'>;
 
-/** Whether the run was scored on banked ducklings (Season 1+, every mode but Egg Rush). */
-export const scoresBanked = (s: Pick<SharedScore, 'mode' | 'ruleset'>): boolean =>
-  s.ruleset >= 1 && s.mode !== 'rush';
+/** Whether the run was scored on banked ducklings (Duckling Dash). */
+export const scoresBanked = (s: Pick<SharedScore, 'mode'>): boolean => s.mode === 'ducklings';
 
-/** Share copy for what the run collected: "banked 12 ducklings", or "5 eggs" before seasons. */
+/** Share copy for what the run collected: "banked 12 ducklings", or "5 eggs". */
 export const haulPhrase = (s: Haul): string =>
   scoresBanked(s) ? `banked ${plural(s.banked, 'duckling')}` : plural(s.eggs, 'egg');
 

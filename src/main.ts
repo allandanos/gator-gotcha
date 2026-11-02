@@ -192,7 +192,7 @@ function boot(): void {
     phase = 'playing';
   };
 
-  /** A ranked run: classic, rush or night. */
+  /** A ranked run: classic, rush or ducklings. */
   const startRun = (nextSeed: string, nextMode: ModeId = mode) => {
     audio.unlock();
     const fromOver = phase === 'over';

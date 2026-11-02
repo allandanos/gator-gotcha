@@ -68,7 +68,7 @@ export const EGGS = {
 
 export const SCORE = { perEgg: 100, perSecond: 10 } as const;
 
-/** Season 1: eggs hatch into ducklings that trail the duck. Units: u, sim ticks. */
+/** Duckling Dash: eggs hatch into ducklings that trail the duck. Units: u, sim ticks. */
 export const TRAIL = {
   max: 12,
   /** Gap kept between each duckling and the one ahead of it. */
@@ -97,10 +97,13 @@ export const BANK = { base: 100, growth: 0.1 } as const;
 export const SIM_DT = 1 / 60;
 
 /**
- * Version of every score-affecting rule (= season). Bump it with any sim change and regenerate
- * the golden replay snapshot; the server rejects runs from any other ruleset. 0 = pre-seasons.
+ * Version of every score-affecting rule. Bump it with any sim change and regenerate the golden
+ * replay snapshots; the server rejects runs from any other ruleset. 0 = before it was recorded.
  */
 export const RULESET = 1;
+
+/** Classic's day/night cycle: day first, then night with the `MODES.night` factors. */
+export const CYCLE = { daySec: 40, nightSec: 20, duskSec: 2 } as const;
 
 /** Ranked mode tuning. Classic must stay at the neutral values: its scores are replayed as-is. */
 export const MODES = {
@@ -110,8 +113,8 @@ export const MODES = {
 
 /**
  * Campaign: 12 curated levels in 3 worlds. A level is a fixed seed plus rules; stars beyond the
- * first (clearing it) come from the `star2` / `star3` conditions. Season 1: egg goals are
- * "bank N ducklings", with par times and clocks loosened for the trips home (needs a playtest).
+ * first (clearing it) come from the `star2` / `star3` conditions. A level with a `ducklings`
+ * goal plays under Duckling Dash rules (trail, nest, golden egg); night levels are always eggs.
  */
 export const CAMPAIGN = {
   worlds: [
@@ -121,17 +124,17 @@ export const CAMPAIGN = {
   ],
   levelsPerWorld: 4,
   levels: [
-    { name: 'First Waddle', goal: { ducklings: 3 }, star2: { parSec: 45 }, star3: { maxSpotted: 0 } },
-    { name: 'Log Hopper', goal: { ducklings: 6 }, star2: { parSec: 70 }, star3: { maxSpotted: 0 } },
+    { name: 'First Waddle', goal: { eggs: 3 }, star2: { parSec: 30 }, star3: { maxSpotted: 0 } },
+    { name: 'Log Hopper', goal: { eggs: 6 }, star2: { parSec: 50 }, star3: { maxSpotted: 0 } },
     { name: 'Hold Still', goal: { surviveSec: 45 }, star2: { minEggs: 3 }, star3: { maxSpotted: 0 } },
     { name: 'Greedy Duck', startLevel: 0.3, goal: { ducklings: 10 }, star2: { parSec: 110 }, star3: { maxSpotted: 1 } },
-    { name: 'Lantern Light', night: true, goal: { ducklings: 4 }, star2: { parSec: 60 }, star3: { maxSpotted: 0 } },
+    { name: 'Lantern Light', night: true, goal: { eggs: 4 }, star2: { parSec: 45 }, star3: { maxSpotted: 0 } },
     { name: 'Ears Everywhere', night: true, goal: { surviveSec: 60 }, star2: { minEggs: 4 }, star3: { maxSpotted: 0 } },
-    { name: 'Dark Dash', night: true, startLevel: 0.3, goal: { ducklings: 8 }, star2: { parSec: 100 }, star3: { maxSpotted: 1 } },
-    { name: 'Moon Rush', night: true, timeLimit: 75, goal: { ducklings: 6 }, star2: { parSec: 55 }, star3: { maxSpotted: 0 } },
+    { name: 'Dark Dash', night: true, startLevel: 0.3, goal: { eggs: 8 }, star2: { parSec: 75 }, star3: { maxSpotted: 1 } },
+    { name: 'Moon Rush', night: true, timeLimit: 60, goal: { eggs: 6 }, star2: { parSec: 40 }, star3: { maxSpotted: 0 } },
     { name: 'Quick Pickings', timeLimit: 60, goal: { ducklings: 6 }, star2: { parSec: 45 }, star3: { maxSpotted: 0 } },
     { name: 'Stay Alive', startLevel: 0.5, goal: { surviveSec: 90 }, star2: { minEggs: 6 }, star3: { maxSpotted: 1 } },
     { name: 'Feeding Frenzy', timeLimit: 105, eggsOnField: 8, goal: { ducklings: 12 }, star2: { parSec: 90 }, star3: { maxSpotted: 2 } },
-    { name: 'The Long Night', night: true, startLevel: 0.4, goal: { ducklings: 15 }, star2: { parSec: 180 }, star3: { maxSpotted: 2 } },
+    { name: 'The Long Night', night: true, startLevel: 0.4, goal: { eggs: 15 }, star2: { parSec: 150 }, star3: { maxSpotted: 2 } },
   ],
 } as const;

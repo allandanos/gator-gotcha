@@ -1,7 +1,7 @@
 import { EGGS, MODES } from '../config.js';
 
 /** Ranked modes: verified by server replay, one leaderboard each. */
-export const MODE_IDS = ['classic', 'rush', 'night'] as const;
+export const MODE_IDS = ['classic', 'rush', 'ducklings'] as const;
 export type ModeId = (typeof MODE_IDS)[number];
 
 /** A level's clear condition: whichever is set must be reached. */
@@ -24,10 +24,12 @@ export interface RunRules {
   readonly coneRangeFactor: number;
   readonly hearFactor: number;
   readonly eggsOnField: number;
-  /** Render hint: lantern fog. Sight and hearing changes come from the factors above. */
+  /** Always night (campaign night levels): lantern fog, with the factors above. */
   readonly night: boolean;
+  /** Classic's day/night cycle: night phases use the `MODES.night` factors (see cycle.ts). */
+  readonly dayNight: boolean;
   readonly scoring: 'classic' | 'rush';
-  /** Season 1 greed loop: eggs hatch into a trail that is banked at the nest; golden eggs. */
+  /** Duckling Dash greed loop: eggs hatch into a trail that is banked at the nest; golden eggs. */
   readonly ducklings: boolean;
 }
 
@@ -40,8 +42,9 @@ export const CLASSIC: RunRules = {
   hearFactor: 1,
   eggsOnField: EGGS.onField,
   night: false,
+  dayNight: true,
   scoring: 'classic',
-  ducklings: true,
+  ducklings: false,
 };
 
 export const NIGHT_RULES: Pick<RunRules, 'coneRangeFactor' | 'hearFactor' | 'night'> = {
@@ -59,10 +62,10 @@ const RULES: Readonly<Record<ModeId, RunRules>> = {
     eggsOnField: MODES.rush.eggsOnField,
     startLevel: MODES.rush.startLevel,
     scoring: 'rush',
-    // Rush stays a pure egg sprint (owner decision, phase 2).
-    ducklings: false,
+    dayNight: false,
   },
-  night: { ...CLASSIC, ...NIGHT_RULES, mode: 'night' },
+  // Its own greed loop, in daylight throughout (owner decision, phase 2 re-scope).
+  ducklings: { ...CLASSIC, mode: 'ducklings', dayNight: false, ducklings: true },
 };
 
 export function rulesForMode(mode: ModeId): RunRules {
@@ -78,5 +81,5 @@ export function parseMode(value: unknown): ModeId | null {
 export const MODE_LABELS: Readonly<Record<ModeId, string>> = {
   classic: 'Classic',
   rush: 'Egg Rush',
-  night: 'Night Swamp',
+  ducklings: 'Duckling Dash',
 };

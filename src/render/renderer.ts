@@ -7,6 +7,7 @@ import type { Gator, GameMap, World } from '../sim/types';
 import type { Effects } from './effects';
 import { PALETTE as P } from './palette';
 import { coneHinted, drawGatorEyes, drawNightFog } from './night';
+import { fogAlpha } from '../sim/cycle';
 import {
   drawAlertIcon,
   drawDuck,
@@ -29,6 +30,8 @@ const REPLAY_DUCK_MARGIN = 0.6;
 /** The nest arrow shows once the trail is this long, even with the nest on screen. */
 const ARROW_TRAIL = 5;
 const ARROW_INSET = 34;
+/** Fog strength from which the gator's eyes and cone hint are drawn over it. */
+const NIGHT_READABLE = 0.5;
 
 function lerpVec(a: Vec, b: Vec, t: number): Vec {
   return { x: lerp(a.x, b.x, t), y: lerp(a.y, b.y, t) };
@@ -140,7 +143,8 @@ export class Renderer {
       drawGator(ctx, gator, t, jaw);
       drawDuck(ctx, duck, t, caught);
     }
-    if (cur.rules.night) this.drawNight(gator, duck.pos, cur, t, replay !== null);
+    const fog = fogAlpha(cur.rules, cur.time);
+    if (fog > 0) this.drawNight(gator, duck.pos, cur, t, replay !== null, fog);
     if (gator.mode !== 'wander') {
       drawAlertIcon(ctx, gator.pos.x, gator.pos.y - 46, gator.mode === 'chase' ? '!' : '?', fx.alertPop);
     }
@@ -204,9 +208,18 @@ export class Renderer {
   }
 
   /** Fog over the swamp; the gator's eyes, and its cone when near, stay readable on top. */
-  private drawNight(gator: Gator, duck: Vec, w: World, t: number, fullCone: boolean): void {
+  private drawNight(
+    gator: Gator,
+    duck: Vec,
+    w: World,
+    t: number,
+    fullCone: boolean,
+    fog: number,
+  ): void {
     const { ctx } = this;
-    drawNightFog(ctx, duck, t);
+    drawNightFog(ctx, duck, t, fog);
+    // While dusk is still thin the swamp (and the cone under it) shows through on its own.
+    if (fog < NIGHT_READABLE) return;
     if (fullCone || coneHinted(gator, duck)) {
       ctx.save();
       ctx.globalAlpha = fullCone ? 1 : 0.45;

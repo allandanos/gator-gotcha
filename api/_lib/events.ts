@@ -28,7 +28,7 @@ const oneOf =
 
 const installKind = oneOf('prompt', 'ios', 'ios_in_app', 'android_in_app');
 const installWhere = oneOf('title', 'over');
-const mode = oneOf('classic', 'rush', 'night', 'campaign');
+const mode = oneOf('classic', 'rush', 'ducklings', 'campaign');
 /** Campaign level number (1-based); absent outside the campaign. */
 const level = num(1, 12, true);
 
@@ -42,7 +42,7 @@ const CATALOGUE: Readonly<Record<string, Readonly<Record<string, PropNormalizer>
   run_end: {
     sec: num(0, 1200, false),
     eggs: num(0, 10_000, true),
-    /** Ducklings banked (Season 1); feeds the "≥ 70 % of runs bank" gate. */
+    /** Ducklings banked (Duckling Dash); feeds the "≥ 70 % of runs bank" gate. */
     banked: num(0, 10_000, true),
     score: num(0, MAX_SCORE, true),
     mode,

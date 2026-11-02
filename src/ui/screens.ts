@@ -37,7 +37,7 @@ export interface GameOverStats {
   readonly sub: string;
   /** Mode name shown next to the seed; empty for classic. */
   readonly modeLabel: string;
-  /** "Banked" (ducklings) under Season 1 rules, "Eggs" in Egg Rush. */
+  /** "Banked" (ducklings) under duckling rules, otherwise "Eggs". */
   readonly eggsLabel: string;
   readonly unseen: string;
   readonly closest: string;

@@ -13,6 +13,12 @@ describe('dueHints', () => {
     expect(r.seen).toBe(0b110);
   });
 
+  it('explains the first nightfall once', () => {
+    const r = dueHints([{ type: 'nightfall' }], 0b111);
+    expect(r.due).toEqual([HINT_TEXT.nightfall]);
+    expect(dueHints([{ type: 'nightfall' }], r.seen).due).toEqual([]);
+  });
+
   it('ignores other events and duplicates within one step', () => {
     const r = dueHints([{ type: 'lost' }, { type: 'spotted' }, { type: 'spotted' }], 0);
     expect(r.due).toHaveLength(1);

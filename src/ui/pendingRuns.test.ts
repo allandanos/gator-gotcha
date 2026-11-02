@@ -109,17 +109,20 @@ describe('pending runs and modes', () => {
   it('keeps the same log in two modes as two runs, and drops unknown modes', () => {
     const q = createPendingRuns(memoryStore());
     q.enqueue({ ...run(1), mode: 'rush' });
-    q.enqueue({ ...run(1), mode: 'night' });
-    expect(q.peekAll().map((r) => r.mode)).toEqual(['rush', 'night']);
+    q.enqueue({ ...run(1), mode: 'ducklings' });
+    expect(q.peekAll().map((r) => r.mode)).toEqual(['rush', 'ducklings']);
     q.remove({ ...run(1), mode: 'rush' });
-    expect(q.peekAll().map((r) => r.mode)).toEqual(['night']);
-    const bad = memoryStore({ 'gator-gotcha:pending': JSON.stringify([{ ...run(2), mode: 'campaign' }]) });
+    expect(q.peekAll().map((r) => r.mode)).toEqual(['ducklings']);
+    // A retired Night Swamp run can no longer be verified, so it is dropped like any unknown mode.
+    const bad = memoryStore({
+      'gator-gotcha:pending': JSON.stringify([{ ...run(2), mode: 'campaign' }, { ...run(3), mode: 'night' }]),
+    });
     expect(createPendingRuns(bad).peekAll()).toEqual([]);
   });
 });
 
 describe('pending runs and rulesets', () => {
-  it('reads runs queued before seasons existed as ruleset 0, so the server 409s and drops them', () => {
+  it('reads runs queued before rulesets existed as ruleset 0, so the server 409s and drops them', () => {
     const legacy = { seed: 's1', log: 'log1', mode: 'classic' as const, finishedAt: 1001 };
     const store = memoryStore({ 'gator-gotcha:pending': JSON.stringify([legacy]) });
     expect(createPendingRuns(store).peekAll()).toEqual([{ ...legacy, ruleset: 0 }]);

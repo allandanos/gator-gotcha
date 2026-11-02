@@ -63,7 +63,7 @@ export class Effects {
   }
 
   handle(events: readonly GameEvent[]): void {
-    // Under Season 1 an egg pays nothing until banked, so the pickup shows the hatch instead.
+    // In Duckling Dash an egg pays nothing until banked, so the pickup shows the hatch instead.
     const hatching = events.some((e) => e.type === 'hatch');
     for (const e of events) {
       if (e.type === 'pickup') {

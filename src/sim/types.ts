@@ -70,6 +70,9 @@ export type GameEvent =
   | { readonly type: 'snapped'; readonly pos: Vec }
   | { readonly type: 'banked'; readonly pos: Vec; readonly count: number; readonly value: number }
   | { readonly type: 'goldenPickup'; readonly pos: Vec }
+  /** Classic's cycle turned over this tick. */
+  | { readonly type: 'nightfall' }
+  | { readonly type: 'daybreak' }
   | { readonly type: 'spotted' }
   | { readonly type: 'lost' }
   | { readonly type: 'sprintStart' }

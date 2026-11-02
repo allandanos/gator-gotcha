@@ -34,6 +34,7 @@
           <div id="hud-carry-chip" class="chip chip--carry" hidden><dt>Carrying</dt><dd id="hud-carry">0</dd></div>
           <div id="hud-banked-chip" class="chip" hidden><dt>Banked</dt><dd id="hud-banked">0</dd></div>
           <div id="hud-goal-chip" class="chip chip--goal" hidden><dt id="hud-goal-label">Goal</dt><dd id="hud-goal">0</dd></div>
+          <div id="hud-night-chip" class="chip chip--night" hidden><dt id="hud-night-label">Night</dt><dd id="hud-night">0</dd></div>
           <div id="hud-time-chip" class="chip"><dt id="hud-time-label">Time</dt><dd id="hud-time">0:00</dd></div>
           <div id="hud-pace" class="chip chip--pace" data-tone="even" hidden><dt>Vs best</dt><dd><span id="hud-pace-icon" aria-hidden="true">●</span> <span id="hud-pace-text">On pace</span></dd></div>
         </dl>
@@ -61,7 +62,7 @@
           <div class="card-col">
             <p class="eyebrow">A swamp chase</p>
             <h1 id="title-heading" class="logo"><span>Gator</span><span>Gotcha!</span></h1>
-            <p class="lede">Grab eggs: each hatches a duckling that waddles behind you. Lead them home to the nest to bank them; the longer the line, the bigger the payout. Unbanked ducklings are worth nothing, and the gator may snap the last one. Golden eggs hatch five. Hide behind logs and reeds.</p>
+            <p class="lede">Waddle around the swamp grabbing eggs. Each egg makes the gator faster and sharper-eyed. Duck behind logs and reeds to break its line of sight, and watch out when night falls.</p>
           </div>
           <div class="card-col">
             <ul class="controls">
@@ -94,7 +95,7 @@
                 <button class="mode-card mode-card--classic" type="button" data-mode="classic">
                   <span class="mode-card__icon"><svg viewBox="0 0 32 32" aria-hidden="true"><ellipse cx="16" cy="18" rx="9" ry="11" fill="#fffdf5" stroke="currentColor" stroke-width="3"/></svg></span>
                   <span class="mode-card__name">Classic</span>
-                  <span class="mode-card__rule">Endless chase. Every egg and every second scores.</span>
+                  <span class="mode-card__rule">Endless chase. Night falls every minute: the gator sees less, hears more.</span>
                   <span class="mode-card__best">Best <b data-mode-best="classic">0</b></span>
                 </button>
               </li>
@@ -107,11 +108,11 @@
                 </button>
               </li>
               <li>
-                <button class="mode-card mode-card--night" type="button" data-mode="night">
-                  <span class="mode-card__icon"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M21 4a12 12 0 1 0 7 17A10 10 0 0 1 21 4Z" fill="#ffd84d" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg></span>
-                  <span class="mode-card__name">Night Swamp</span>
-                  <span class="mode-card__rule">Lantern light only. The gator sees less but hears more.</span>
-                  <span class="mode-card__best">Best <b data-mode-best="night">0</b></span>
+                <button class="mode-card mode-card--ducklings" type="button" data-mode="ducklings">
+                  <span class="mode-card__icon"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="13" cy="19" r="8" fill="#ffd84d" stroke="currentColor" stroke-width="3"/><circle cx="20" cy="11" r="6" fill="#ffd84d" stroke="currentColor" stroke-width="3"/><path d="M25 11h4" stroke="#ff9f1c" stroke-width="3" stroke-linecap="round"/></svg></span>
+                  <span class="mode-card__name">Duckling Dash</span>
+                  <span class="mode-card__rule">Eggs hatch into a trail. Lead it home to the nest to bank it.</span>
+                  <span class="mode-card__best">Best <b data-mode-best="ducklings">0</b></span>
                 </button>
               </li>
             <li>
@@ -234,16 +235,14 @@
       <section id="screen-board" class="screen" aria-labelledby="board-heading" hidden>
         <div class="card card--board">
           <h2 id="board-heading" class="heading">Top Ducks</h2>
-          <p id="board-season" class="board-season"></p>
           <div class="mode-switch" role="group" aria-label="Leaderboard mode">
             <button class="mode-switch__btn" type="button" data-board-mode="classic" aria-pressed="true">Classic</button>
             <button class="mode-switch__btn" type="button" data-board-mode="rush" aria-pressed="false">Egg Rush</button>
-            <button class="mode-switch__btn" type="button" data-board-mode="night" aria-pressed="false">Night</button>
+            <button class="mode-switch__btn" type="button" data-board-mode="ducklings" aria-pressed="false">Ducklings</button>
           </div>
           <div class="tabs" role="tablist" aria-label="Leaderboard">
             <button id="tab-all" class="tab" role="tab" type="button" aria-selected="true" aria-controls="board-list">All-time</button>
             <button id="tab-daily" class="tab" role="tab" type="button" aria-selected="false" aria-controls="board-list">Today</button>
-            <button id="tab-season0" class="tab" role="tab" type="button" aria-selected="false" aria-controls="board-list">Season 0</button>
           </div>
           <p id="board-status" class="online-status" role="status" aria-live="polite"></p>
           <ol id="board-list" class="board" role="tabpanel"></ol>

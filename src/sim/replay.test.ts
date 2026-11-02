@@ -1,3 +1,4 @@
+import { CYCLE, SIM_DT } from '../config.js';
 import { len } from '../core/vec.js';
 import { recordBotRun, recordEvasiveRun } from './__fixtures__/recordBot.js';
 import { dequantizeInput, quantizeInput } from './input.js';
@@ -68,11 +69,26 @@ describe('replayRun', () => {
     });
   });
 
-  it('matches a golden snapshot (guards determinism regressions; regenerate per RULESET)', () => {
-    // Ruleset 1. Bot 4 banks on this swamp, so the snapshot covers hatching and banking.
-    const { log, banked } = record('golden', 4);
-    expect(banked).toBeGreaterThan(0);
+  it('matches a Classic golden snapshot through a full night (regenerate per RULESET)', () => {
+    // Ruleset 1. The evasive bot lasts past nightfall (40 s) and daybreak (60 s) on this swamp.
+    const { log } = recordEvasiveRun('golden', rulesForMode('classic'));
+    expect(log.length).toBeGreaterThan((CYCLE.daySec + CYCLE.nightSec) / SIM_DT);
     expect(replayRun('golden', log)).toMatchInlineSnapshot(`
+      {
+        "banked": 0,
+        "eggs": 0,
+        "ok": true,
+        "score": 700,
+        "ticks": 4257,
+      }
+    `);
+  });
+
+  it('matches a Duckling Dash golden snapshot (regenerate per RULESET)', () => {
+    // Bot 4 banks on this swamp, so the snapshot covers hatching and banking.
+    const { log, banked } = record('golden', 4, rulesForMode('ducklings'));
+    expect(banked).toBeGreaterThan(0);
+    expect(replayRun('golden', log, 'ducklings')).toMatchInlineSnapshot(`
       {
         "banked": 4,
         "eggs": 4,
@@ -83,15 +99,17 @@ describe('replayRun', () => {
     `);
   });
 
-  it('gives the same result replaying the same log twice, over 50 seeds', () => {
+  it('gives the same result replaying the same log twice, over 50 seeds per mode', () => {
     let banking = 0;
     for (let i = 0; i < 50; i++) {
       const seed = `det${i}`;
-      const { log, score, banked } = record(seed, i);
-      const a = replayRun(seed, log);
-      expect(a).toEqual(replayRun(seed, log));
-      expect(a).toMatchObject({ ok: true, score, banked });
-      if (banked > 0) banking++;
+      for (const mode of ['classic', 'ducklings'] as const) {
+        const { log, score, banked } = record(seed, i, rulesForMode(mode));
+        const a = replayRun(seed, log, mode);
+        expect(a).toEqual(replayRun(seed, log, mode));
+        expect(a).toMatchObject({ ok: true, score, banked });
+        if (banked > 0) banking++;
+      }
     }
     expect(banking).toBeGreaterThan(25);
   });
@@ -108,8 +126,8 @@ describe('replayRun', () => {
 });
 
 describe('replayRun per mode', () => {
-  it('reproduces night and rush bot runs under their own mode', () => {
-    for (const mode of ['night', 'rush'] as const) {
+  it('reproduces duckling and rush bot runs under their own mode', () => {
+    for (const mode of ['ducklings', 'rush'] as const) {
       const { log, score } = recordBotRun('golden', 3, rulesForMode(mode));
       expect(replayRun('golden', log, mode)).toMatchObject({ ok: true, score, ticks: log.length });
     }

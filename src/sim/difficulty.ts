@@ -1,5 +1,6 @@
 import { DIFFICULTY, GATOR } from '../config.js';
 import { clamp, lerp } from '../core/vec.js';
+import { senseFactors } from './cycle.js';
 import { CLASSIC, type RunRules } from './rules.js';
 
 export interface GatorStats {
@@ -24,11 +25,12 @@ export function gatorStats(
   carried = 0,
 ): GatorStats {
   const level = difficultyLevel(time, eggs + carried, rules.startLevel);
+  const senses = senseFactors(rules, time);
   return {
     level,
     speed: lerp(GATOR.baseSpeed, GATOR.maxSpeed, level),
-    coneRange: lerp(GATOR.coneRangeMin, GATOR.coneRangeMax, level) * rules.coneRangeFactor,
+    coneRange: lerp(GATOR.coneRangeMin, GATOR.coneRangeMax, level) * senses.cone,
     coneAngle: lerp(GATOR.coneAngleMin, GATOR.coneAngleMax, level),
-    hearRadius: GATOR.splashHearRadius * rules.hearFactor,
+    hearRadius: GATOR.splashHearRadius * senses.hear,
   };
 }

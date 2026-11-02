@@ -1,6 +1,5 @@
 import { currentUserId, ensureSession, supabase } from './client';
 import { NICKNAME_PATTERN } from '../core/nickname';
-import { RULESET } from '../config';
 import { parseMode, type ModeId } from '../sim/rules';
 
 export type Board = 'all' | 'daily';
@@ -88,11 +87,10 @@ export async function fetchBoard(
   board: Board,
   day: string | null,
   mode: ModeId,
-  season: number = RULESET,
   limit = 50,
 ): Promise<BoardRow[]> {
-  // The season is always explicit, so the board matches this build's rules whatever app_config says.
-  const args = { board, day, lim: limit, mode, season };
+  // Classic omits `mode` so the call matches the function's original signature.
+  const args = { board, day, lim: limit, ...(mode === 'classic' ? {} : { mode }) };
   const { data, error } = await supabase().rpc('leaderboard', args);
   if (error) throw new Error(error.message);
   return (data as Array<Record<string, unknown>>).map((r) => ({

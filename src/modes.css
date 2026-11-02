@@ -2,6 +2,8 @@
 :root {
   --night: #16224a;
   --night-glow: #ffe35a;
+  --ducklings: #d8eef6;
+  --ducklings-ink: #1d5b73;
   --rush: #ff8a3d;
 }
 
@@ -121,20 +123,11 @@
 .mode-card--rush {
   --card-bg: #ffe9c7;
 }
-.mode-card--night {
-  --card-bg: var(--night);
-  color: var(--cream);
+.mode-card--ducklings {
+  --card-bg: var(--ducklings);
 }
-.mode-card--night .mode-card__rule,
-.mode-card--night .mode-card__best {
-  color: #c6cff0;
-}
-.mode-card--night .mode-card__best b {
-  color: var(--night-glow);
-}
-.mode-card--night .mode-card__icon svg {
-  color: var(--ink);
-  filter: drop-shadow(0 0 6px rgba(255, 227, 90, 0.6));
+.mode-card--ducklings .mode-card__best b {
+  color: var(--ducklings-ink);
 }
 
 /* ---------- Leaderboard mode switch ---------- */
@@ -200,6 +193,16 @@
   background: var(--ink);
   color: var(--yolk);
   border-radius: var(--radius-chip);
+}
+
+/* ---------- HUD day/night cue (Classic) ---------- */
+.chip--night {
+  white-space: nowrap;
+  background: var(--night);
+  color: var(--cream);
+}
+.chip--night dt {
+  color: var(--night-glow);
 }
 
 /* ---------- HUD countdown ---------- */

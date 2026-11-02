@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { RULESET } from '../../src/config.js';
 import { parseSeed } from '../../src/core/rng.js';
-import { MODE_IDS, type ModeId } from '../../src/sim/rules.js';
+import { parseMode, type ModeId } from '../../src/sim/rules.js';
 import {
   MAX_ENCODED_LOG,
   dailyDateOf,
@@ -18,9 +18,10 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const BodySchema = z.object({
   seed: z.string().max(12),
   log: z.string().min(1).max(MAX_ENCODED_LOG),
-  // Absent for older clients and runs queued before modes existed: those are classic.
-  mode: z.enum(MODE_IDS).default('classic'),
-  // Absent for clients built before seasons: ruleset 0, which the stale-ruleset check rejects.
+  // Absent for older clients and runs queued before modes existed: those are classic. Checked
+  // after the ruleset, so a stale client sending a retired mode (night) is told to reload.
+  mode: z.string().max(16).default('classic'),
+  // Absent for clients built before rulesets: ruleset 0, which the stale-ruleset check rejects.
   ruleset: z.number().int().default(0),
 });
 
@@ -60,6 +61,8 @@ export async function submitScore(
   if (!parsed.success) return reject(400, 'Invalid submission');
   // The server only replays the current rules; 409 tells the client's queue to drop the run.
   if (parsed.data.ruleset !== RULESET) return reject(409, 'Game updated: please reload');
+  const mode = parseMode(parsed.data.mode);
+  if (!mode) return reject(400, 'Invalid mode');
   const seed = parseSeed(parsed.data.seed);
   if (!seed) return reject(400, 'Invalid seed');
 
@@ -75,7 +78,6 @@ export async function submitScore(
     return reject(429, 'Too many submissions, slow down');
   }
 
-  const mode = parsed.data.mode;
   const replay = replayRun(seed, inputs, mode);
   if (!replay.ok) return reject(422, `Run could not be verified (${replay.reason})`);
 
@@ -104,9 +106,9 @@ export async function submitScore(
   if (inserted === 'duplicate') return reject(409, 'This run was already submitted');
 
   const [rank, dailyRank] = await Promise.all([
-    repo.rankFor('all', null, mode, RULESET, userId, replay.score),
+    repo.rankFor('all', null, mode, userId, replay.score),
     dailyDate
-      ? repo.rankFor('daily', dailyDate, mode, RULESET, userId, replay.score)
+      ? repo.rankFor('daily', dailyDate, mode, userId, replay.score)
       : Promise.resolve(null),
   ]);
   return {

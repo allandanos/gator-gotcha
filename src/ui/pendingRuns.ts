@@ -10,7 +10,7 @@ export interface PendingRun {
   readonly log: string;
   /** Missing on runs queued before modes existed: those are classic. */
   readonly mode: ModeId;
-  /** Sim ruleset the run was played under. Missing on runs queued before seasons: 0. */
+  /** Sim ruleset the run was played under. Missing on runs queued before rulesets: 0. */
   readonly ruleset: number;
   readonly finishedAt: number;
 }

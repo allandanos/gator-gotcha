@@ -12,16 +12,16 @@ describe('format', () => {
 
   it('labels and links other modes', () => {
     expect(modeQuery('rush')).toBe('&mode=rush');
-    expect(modePrefix('night')).toBe('Night Swamp: ');
+    expect(modePrefix('ducklings')).toBe('Duckling Dash: ');
   });
 
-  it('describes Season 1 runs by ducklings banked, and Rush or Season 0 runs by eggs', () => {
-    const s1 = { mode: 'classic' as const, ruleset: 1, eggs: 14, banked: 12 };
-    expect(haulPhrase(s1)).toBe('banked 12 ducklings');
-    expect(haulPhrase({ ...s1, banked: 1 })).toBe('banked 1 duckling');
-    expect(haulStat(s1)).toEqual(['Banked', '12']);
-    expect(haulPhrase({ ...s1, mode: 'rush' })).toBe('14 eggs');
-    expect(haulPhrase({ ...s1, ruleset: 0, eggs: 1 })).toBe('1 egg');
-    expect(haulStat({ ...s1, ruleset: 0 })).toEqual(['Eggs', '14']);
+  it('describes Duckling Dash runs by ducklings banked, and other modes by eggs', () => {
+    const dash = { mode: 'ducklings' as const, eggs: 14, banked: 12 };
+    expect(haulPhrase(dash)).toBe('banked 12 ducklings');
+    expect(haulPhrase({ ...dash, banked: 1 })).toBe('banked 1 duckling');
+    expect(haulStat(dash)).toEqual(['Banked', '12']);
+    expect(haulPhrase({ ...dash, mode: 'rush' })).toBe('14 eggs');
+    expect(haulPhrase({ ...dash, mode: 'classic', eggs: 1 })).toBe('1 egg');
+    expect(haulStat({ ...dash, mode: 'classic' })).toEqual(['Eggs', '14']);
   });
 });

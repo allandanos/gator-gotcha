@@ -1,9 +1,9 @@
-import { EGGS, GATOR, GOLDEN, NEST, SIM_DT, SNAP, TRAIL } from '../config.js';
+import { CYCLE, EGGS, GATOR, GOLDEN, NEST, SIM_DT, SNAP, TRAIL } from '../config.js';
 import { Rng } from '../core/rng.js';
 import { dist } from '../core/vec.js';
 import { bankValue, scoreOf } from './scoring.js';
 import type { InputState, World } from './types.js';
-import { CLASSIC, rulesForMode } from './rules.js';
+import { CLASSIC, NIGHT_RULES, rulesForMode, type RunRules } from './rules.js';
 import { createWorld, step } from './world.js';
 
 /** Golden-egg test swamp (phase 2 appendix): the first `gold<n>` seed with one on the opening field. */
@@ -144,10 +144,44 @@ describe('world under run rules', () => {
   });
 });
 
-describe('season 1: ducklings, snapping, banking, golden egg', () => {
+describe('classic day/night cycle', () => {
   const IDLE: InputState = { move: { x: 0, y: 0 }, sprint: false };
+  /** Step from just before `at` seconds to just after it, collecting events. */
+  const across = (rules: RunRules, at: number) => {
+    const w0 = createWorld('cycle', rules);
+    let w: World = { ...w0, time: at - SIM_DT / 2, gator: { ...w0.gator, pos: { x: 1550, y: 950 }, grace: 999 } };
+    w = step(w, IDLE, SIM_DT);
+    return w.events.map((e) => e.type);
+  };
+
+  it('emits nightfall when day ends and daybreak when night ends', () => {
+    expect(across(CLASSIC, CYCLE.daySec)).toContain('nightfall');
+    expect(across(CLASSIC, CYCLE.daySec + CYCLE.nightSec)).toContain('daybreak');
+    expect(across(CLASSIC, CYCLE.daySec / 2)).not.toContain('nightfall');
+  });
+
+  it('never cycles in Duckling Dash, Egg Rush or fixed-night levels', () => {
+    for (const rules of [rulesForMode('ducklings'), rulesForMode('rush'), { ...CLASSIC, ...NIGHT_RULES, dayNight: false }]) {
+      expect(across(rules, CYCLE.daySec)).not.toContain('nightfall');
+    }
+  });
+
+  it('hatches nothing in Classic', () => {
+    const w0 = createWorld('hatch');
+    const egg = w0.eggs[0]!;
+    const w = { ...w0, gator: { ...w0.gator, pos: { x: 1550, y: 950 }, grace: 999 } };
+    const after = step({ ...w, duck: { ...w.duck, pos: { x: egg.pos.x - 20, y: egg.pos.y } } }, { move: { x: 1, y: 0 }, sprint: false }, SIM_DT);
+    expect(after.eggsCollected).toBe(1);
+    expect(after.ducklings).toEqual([]);
+    expect(scoreOf(after)).toBe(100);
+  });
+});
+
+describe('duckling dash: ducklings, snapping, banking, golden egg', () => {
+  const IDLE: InputState = { move: { x: 0, y: 0 }, sprint: false };
+  const DUCKLINGS = rulesForMode('ducklings');
   /** A world with the gator parked far away, quiet and in grace, so nothing interferes. */
-  const calm = (seed: string, rules = CLASSIC): World => {
+  const calm = (seed: string, rules = DUCKLINGS): World => {
     const w = createWorld(seed, rules);
     return { ...w, gator: { ...w.gator, pos: { x: 1550, y: 950 }, grace: 999 } };
   };
@@ -164,7 +198,7 @@ describe('season 1: ducklings, snapping, banking, golden egg', () => {
   });
 
   it('starts with an empty trail and the nest on the duck spawn', () => {
-    const w = createWorld('nest');
+    const w = createWorld('nest', DUCKLINGS);
     expect(w).toMatchObject({ ducklings: [], banked: 0, bankedDucklings: 0, goldenEggs: 0 });
     expect(w.nest).toEqual(w.map.duckSpawn);
   });
@@ -267,7 +301,7 @@ describe('season 1: ducklings, snapping, banking, golden egg', () => {
   it('spawns a golden egg on the seeded test swamp, at most one at a time', () => {
     let w = calm(GOLDEN_SEED);
     expect(w.eggs.filter((e) => e.golden)).toHaveLength(1);
-    expect(createWorld('gold3').eggs.some((e) => e.golden)).toBe(false);
+    expect(createWorld('gold3', DUCKLINGS).eggs.some((e) => e.golden)).toBe(false);
     for (let i = 0; i < 20; i++) w = grab({ ...w, ducklings: [] }, w.eggs.find((e) => !e.golden)!);
     expect(w.eggs.filter((e) => e.golden).length).toBeLessThanOrEqual(1);
   });

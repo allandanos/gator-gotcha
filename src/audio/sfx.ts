@@ -90,6 +90,15 @@ export function playEvents(engine: AudioEngine, events: readonly GameEvent[]): v
         }
         break;
       }
+      case 'nightfall':
+        // A low falling hum as the light goes.
+        tone(engine, 'sine', 220, 110, now, 1.2, 0.14);
+        tone(engine, 'triangle', 330, 165, now + 0.15, 1.0, 0.07);
+        break;
+      case 'daybreak':
+        tone(engine, 'sine', 660, 990, now, 0.25, 0.1);
+        tone(engine, 'sine', 990, 1320, now + 0.2, 0.3, 0.08);
+        break;
       case 'caught':
         tone(engine, 'sawtooth', 220, 55, now, 0.35, 0.3);
         noiseBurst(engine, now, 0.25, 0.4, 300, 0.6);
