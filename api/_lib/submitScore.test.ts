@@ -1,4 +1,5 @@
 import { recordBotRun } from '../../src/sim/__fixtures__/recordBot.js';
+import { RULESET } from '../../src/config.js';
 import { rulesForMode } from '../../src/sim/rules.js';
 import { dailySeed, encodeLog } from '../../src/sim/replay.js';
 import type { NewScore, ScoreRepository } from './repository.js';
@@ -25,7 +26,7 @@ function fakeRepo(overrides: Partial<ScoreRepository> = {}) {
 }
 
 const run = recordBotRun('golden', 3);
-const body = { seed: 'golden', log: encodeLog(run.log) };
+const body = { ruleset: RULESET, seed: 'golden', log: encodeLog(run.log) };
 
 describe('submitScore', () => {
   it('records the server-replayed score and returns ranks', async () => {
@@ -48,7 +49,7 @@ describe('submitScore', () => {
     const seed = dailySeed(NOW);
     const daily = recordBotRun(seed, 5);
     const { repo, inserted } = fakeRepo();
-    const out = await submitScore(repo, 'good', { seed, log: encodeLog(daily.log) }, NOW);
+    const out = await submitScore(repo, 'good', { ruleset: RULESET, seed, log: encodeLog(daily.log) }, NOW);
     expect(out.ok && out.result.dailyRank).toBe(2);
     expect(inserted[0]?.dailyDate).toBe('2026-10-31');
   });
@@ -57,7 +58,7 @@ describe('submitScore', () => {
     const seed = dailySeed(new Date(Date.UTC(2026, 9, 20)));
     const old = recordBotRun(seed, 5);
     const { repo, inserted } = fakeRepo();
-    await submitScore(repo, 'good', { seed, log: encodeLog(old.log) }, NOW);
+    await submitScore(repo, 'good', { ruleset: RULESET, seed, log: encodeLog(old.log) }, NOW);
     expect(inserted[0]?.dailyDate).toBeNull();
   });
 
@@ -73,7 +74,7 @@ describe('submitScore', () => {
     const { repo, inserted } = fakeRepo({
       rankFor: async (board, _day, mode) => (ranks.push(`${board}:${mode}`), 4),
     });
-    const out = await submitScore(repo, 'good', { seed: 'golden', log: encodeLog(rush.log), mode: 'rush' }, NOW);
+    const out = await submitScore(repo, 'good', { ruleset: RULESET, seed: 'golden', log: encodeLog(rush.log), mode: 'rush' }, NOW);
     expect(out).toMatchObject({ ok: true, result: { score: rush.score, mode: 'rush', rank: 4, dailyRank: null } });
     expect(inserted[0]).toMatchObject({ mode: 'rush', score: rush.score });
     expect(ranks).toEqual(['all:rush']);
@@ -83,7 +84,7 @@ describe('submitScore', () => {
     const seed = dailySeed(NOW);
     const night = recordBotRun(seed, 5, rulesForMode('night'));
     const { repo, inserted } = fakeRepo();
-    const out = await submitScore(repo, 'good', { seed, log: encodeLog(night.log), mode: 'night' }, NOW);
+    const out = await submitScore(repo, 'good', { ruleset: RULESET, seed, log: encodeLog(night.log), mode: 'night' }, NOW);
     expect(out.ok && out.result.dailyRank).toBeNull();
     expect(inserted[0]).toMatchObject({ mode: 'night', dailyDate: null });
   });
@@ -92,27 +93,50 @@ describe('submitScore', () => {
     const night = recordBotRun('golden', 3, rulesForMode('night'));
     const { repo, inserted } = fakeRepo();
     const log = encodeLog(night.log);
-    const a = await submitScore(repo, 'good', { seed: 'golden', log, mode: 'night' }, NOW);
-    const b = await submitScore(repo, 'good', { seed: 'golden', log, mode: 'classic' }, NOW);
+    const a = await submitScore(repo, 'good', { ruleset: RULESET, seed: 'golden', log, mode: 'night' }, NOW);
+    const b = await submitScore(repo, 'good', { ruleset: RULESET, seed: 'golden', log, mode: 'classic' }, NOW);
     expect(a.ok).toBe(true);
     // Classic replays the same log to its own (possibly identical) result; either way it's a new row.
     expect(b.ok || (b as { status: number }).status === 422).toBe(true);
     expect(new Set(inserted.map((r) => r.inputHash)).size).toBe(inserted.length);
   });
 
-  it('keeps the classic duplicate hash unchanged for already-queued runs', async () => {
+  it('scopes the duplicate hash to the ruleset, so a new season never collides with an old run', async () => {
     const { createHash } = await import('node:crypto');
     const { repo, inserted } = fakeRepo();
     await submitScore(repo, 'good', body, NOW);
-    expect(inserted[0]?.inputHash).toBe(createHash('sha256').update(`golden:${body.log}`).digest('hex'));
+    const hash = createHash('sha256').update(`r${RULESET}:classic:golden:${body.log}`).digest('hex');
+    expect(inserted[0]?.inputHash).toBe(hash);
+  });
+
+  it('stores the ruleset and ranks on the current season', async () => {
+    const seasons: number[] = [];
+    const { repo, inserted } = fakeRepo({
+      rankFor: async (_board, _day, _mode, season) => (seasons.push(season), 3),
+    });
+    await submitScore(repo, 'good', body, NOW);
+    expect(inserted[0]?.ruleset).toBe(RULESET);
+    expect(seasons).toEqual([RULESET]);
+  });
+
+  it.each([
+    ['a stale ruleset', { ...body, ruleset: RULESET - 1 }],
+    ['a future ruleset', { ...body, ruleset: RULESET + 1 }],
+    ['no ruleset (clients from before seasons)', { seed: body.seed, log: body.log }],
+  ])('answers 409 "please reload" for %s, before replaying anything', async (_name, payload) => {
+    const { repo, inserted } = fakeRepo();
+    const out = await submitScore(repo, 'good', payload, NOW);
+    expect(out).toEqual({ ok: false, status: 409, error: 'Game updated: please reload' });
+    expect(inserted).toHaveLength(0);
   });
 
   it.each([
     ['unknown mode', 'good', { ...body, mode: 'campaign' }, 400],
     ['non-string mode', 'good', { ...body, mode: 2 }, 400],
+    ['non-integer ruleset', 'good', { ...body, ruleset: 1.5 }, 400],
     ['missing token', null, body, 401],
     ['bad token', 'nope', body, 401],
-    ['malformed body', 'good', { seed: 1 }, 400],
+    ['malformed body', 'good', { ruleset: RULESET, seed: 1 }, 400],
     ['invalid seed', 'good', { ...body, seed: 'BAD SEED!' }, 400],
     ['garbage log', 'good', { ...body, log: '!!notbase64' }, 400],
     ['log for another seed', 'good', { ...body, seed: 'other' }, 422],

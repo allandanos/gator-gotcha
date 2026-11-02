@@ -10,6 +10,8 @@ export interface PendingRun {
   readonly log: string;
   /** Missing on runs queued before modes existed: those are classic. */
   readonly mode: ModeId;
+  /** Sim ruleset the run was played under. Missing on runs queued before seasons: 0. */
+  readonly ruleset: number;
   readonly finishedAt: number;
 }
 
@@ -33,11 +35,13 @@ function toPendingRun(v: unknown): PendingRun | null {
     return null;
   }
   const mode = r.mode === undefined ? 'classic' : parseMode(r.mode);
-  return mode ? { seed: r.seed, log: r.log, mode, finishedAt: r.finishedAt } : null;
+  const ruleset = r.ruleset === undefined ? 0 : r.ruleset;
+  if (!mode || typeof ruleset !== 'number' || !Number.isInteger(ruleset)) return null;
+  return { seed: r.seed, log: r.log, mode, ruleset, finishedAt: r.finishedAt };
 }
 
 const sameRun = (a: PendingRun, b: PendingRun) =>
-  a.seed === b.seed && a.log === b.log && a.mode === b.mode;
+  a.seed === b.seed && a.log === b.log && a.mode === b.mode && a.ruleset === b.ruleset;
 
 /** What to do with a queued run after the server answered with `status`. */
 export function flushDecision(status: SubmitStatus): FlushDecision {

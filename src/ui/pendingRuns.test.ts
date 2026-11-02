@@ -11,7 +11,13 @@ function memoryStore(initial: Record<string, string> = {}): KeyValueStore & { da
   };
 }
 
-const run = (n: number) => ({ seed: `s${n}`, log: `log${n}`, mode: 'classic' as const, finishedAt: 1000 + n });
+const run = (n: number) => ({
+  seed: `s${n}`,
+  log: `log${n}`,
+  mode: 'classic' as const,
+  ruleset: 1,
+  finishedAt: 1000 + n,
+});
 
 describe('pending runs queue', () => {
   it('round-trips queued runs in order', () => {
@@ -108,6 +114,23 @@ describe('pending runs and modes', () => {
     q.remove({ ...run(1), mode: 'rush' });
     expect(q.peekAll().map((r) => r.mode)).toEqual(['night']);
     const bad = memoryStore({ 'gator-gotcha:pending': JSON.stringify([{ ...run(2), mode: 'campaign' }]) });
+    expect(createPendingRuns(bad).peekAll()).toEqual([]);
+  });
+});
+
+describe('pending runs and rulesets', () => {
+  it('reads runs queued before seasons existed as ruleset 0, so the server 409s and drops them', () => {
+    const legacy = { seed: 's1', log: 'log1', mode: 'classic' as const, finishedAt: 1001 };
+    const store = memoryStore({ 'gator-gotcha:pending': JSON.stringify([legacy]) });
+    expect(createPendingRuns(store).peekAll()).toEqual([{ ...legacy, ruleset: 0 }]);
+  });
+
+  it('keeps the same log under two rulesets as two runs, and drops a malformed ruleset', () => {
+    const q = createPendingRuns(memoryStore());
+    q.enqueue({ ...run(1), ruleset: 0 });
+    q.enqueue({ ...run(1), ruleset: 1 });
+    expect(q.peekAll().map((r) => r.ruleset)).toEqual([0, 1]);
+    const bad = memoryStore({ 'gator-gotcha:pending': JSON.stringify([{ ...run(2), ruleset: 'x' }]) });
     expect(createPendingRuns(bad).peekAll()).toEqual([]);
   });
 });

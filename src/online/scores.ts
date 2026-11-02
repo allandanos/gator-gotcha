@@ -1,5 +1,6 @@
 import { currentUserId, ensureSession, supabase } from './client';
 import { NICKNAME_PATTERN } from '../core/nickname';
+import { RULESET } from '../config';
 import { parseMode, type ModeId } from '../sim/rules';
 
 export type Board = 'all' | 'daily';
@@ -51,14 +52,19 @@ export class SubmitError extends Error {
 }
 
 /** Submit a finished run for server-side replay verification. */
-export async function submitRun(seed: string, log: string, mode: ModeId): Promise<SubmitResult> {
+export async function submitRun(
+  seed: string,
+  log: string,
+  mode: ModeId,
+  ruleset: number,
+): Promise<SubmitResult> {
   let res: Response;
   try {
     const { token } = await ensureSession();
     res = await fetch('/api/scores', {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
-      body: JSON.stringify({ seed, log, mode }),
+      body: JSON.stringify({ seed, log, mode, ruleset }),
     });
   } catch (err) {
     // fetch (or the anonymous sign-in) never reached a server.
@@ -80,10 +86,11 @@ export async function fetchBoard(
   board: Board,
   day: string | null,
   mode: ModeId,
+  season: number = RULESET,
   limit = 50,
 ): Promise<BoardRow[]> {
-  // Classic omits `mode` so the call matches the function's original signature.
-  const args = { board, day, lim: limit, ...(mode === 'classic' ? {} : { mode }) };
+  // The season is always explicit, so the board matches this build's rules whatever app_config says.
+  const args = { board, day, lim: limit, mode, season };
   const { data, error } = await supabase().rpc('leaderboard', args);
   if (error) throw new Error(error.message);
   return (data as Array<Record<string, unknown>>).map((r) => ({

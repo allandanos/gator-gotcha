@@ -232,6 +232,7 @@
       <section id="screen-board" class="screen" aria-labelledby="board-heading" hidden>
         <div class="card card--board">
           <h2 id="board-heading" class="heading">Top Ducks</h2>
+          <p id="board-season" class="board-season"></p>
           <div class="mode-switch" role="group" aria-label="Leaderboard mode">
             <button class="mode-switch__btn" type="button" data-board-mode="classic" aria-pressed="true">Classic</button>
             <button class="mode-switch__btn" type="button" data-board-mode="rush" aria-pressed="false">Egg Rush</button>
@@ -240,6 +241,7 @@
           <div class="tabs" role="tablist" aria-label="Leaderboard">
             <button id="tab-all" class="tab" role="tab" type="button" aria-selected="true" aria-controls="board-list">All-time</button>
             <button id="tab-daily" class="tab" role="tab" type="button" aria-selected="false" aria-controls="board-list">Today</button>
+            <button id="tab-season0" class="tab" role="tab" type="button" aria-selected="false" aria-controls="board-list">Season 0</button>
           </div>
           <p id="board-status" class="online-status" role="status" aria-live="polite"></p>
           <ol id="board-list" class="board" role="tabpanel"></ol>

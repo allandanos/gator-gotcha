@@ -70,6 +70,12 @@ export const SCORE = { perEgg: 100, perSecond: 10 } as const;
 
 export const SIM_DT = 1 / 60;
 
+/**
+ * Version of every score-affecting rule (= season). Bump it with any sim change and regenerate
+ * the golden replay snapshot; the server rejects runs from any other ruleset. 0 = pre-seasons.
+ */
+export const RULESET = 1;
+
 /** Ranked mode tuning. Classic must stay at the neutral values: its scores are replayed as-is. */
 export const MODES = {
   rush: { timeLimit: 90, eggsOnField: 8, startLevel: 0.2, clutchBonus: 500 },

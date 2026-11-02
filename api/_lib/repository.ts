@@ -7,6 +7,8 @@ export interface NewScore {
   readonly userId: string;
   readonly seed: string;
   readonly mode: ModeId;
+  /** Season the run was replayed under (`RULESET`). */
+  readonly ruleset: number;
   readonly dailyDate: string | null;
   readonly score: number;
   readonly eggs: number;
@@ -30,7 +32,14 @@ export interface ScoreRepository {
   userIdForToken(token: string): Promise<string | null>;
   countSince(userId: string, sinceIso: string): Promise<number>;
   insert(row: NewScore): Promise<{ id: string } | 'duplicate'>;
-  rankFor(board: Board, day: string | null, mode: ModeId, userId: string, score: number): Promise<number>;
+  rankFor(
+    board: Board,
+    day: string | null,
+    mode: ModeId,
+    season: number,
+    userId: string,
+    score: number,
+  ): Promise<number>;
   getShared(id: string): Promise<SharedScore | null>;
 }
 
@@ -93,6 +102,7 @@ export function supabaseRepository(client: SupabaseClient = adminClient()): Scor
           user_id: row.userId,
           seed: row.seed,
           mode: row.mode,
+          ruleset: row.ruleset,
           daily_date: row.dailyDate,
           score: row.score,
           eggs: row.eggs,
@@ -105,11 +115,12 @@ export function supabaseRepository(client: SupabaseClient = adminClient()): Scor
       if (error || !data) throw new Error(`insert: ${error?.message ?? 'no row'}`);
       return { id: data.id as string };
     },
-    async rankFor(board, day, mode, userId, score) {
+    async rankFor(board, day, mode, season, userId, score) {
       const { data, error } = await client.rpc('rank_for', {
         board,
         day,
         mode,
+        season,
         player: userId,
         value: score,
       });

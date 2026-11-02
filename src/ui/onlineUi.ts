@@ -1,4 +1,4 @@
-import { SIM_DT } from '../config';
+import { RULESET, SIM_DT } from '../config';
 import { MODE_IDS, MODE_LABELS, type ModeId } from '../sim/rules';
 import { track } from './analytics';
 import { $, formatTime } from './dom';
@@ -13,7 +13,8 @@ import type { ScreenId } from './screens';
 import { hasStoredSession, loadNickname, saveNickname } from './storage';
 
 type OnlineModule = typeof import('../online');
-type Board = 'all' | 'daily';
+/** `season0` is the archive: the all-time board of the rules before seasons. */
+type Board = 'all' | 'daily' | 'season0';
 
 const ONLINE_CONFIGURED = Boolean(
   import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY,
@@ -62,6 +63,8 @@ export class OnlineUi {
   private readonly boardStatus = $('#board-status');
   private readonly tabAll = $<HTMLButtonElement>('#tab-all');
   private readonly tabDaily = $<HTMLButtonElement>('#tab-daily');
+  private readonly tabSeason0 = $<HTMLButtonElement>('#tab-season0');
+  private readonly boardSeason = $('#board-season');
   private readonly modeBtns = [...document.querySelectorAll<HTMLButtonElement>('[data-board-mode]')];
 
   constructor(
@@ -80,11 +83,12 @@ export class OnlineUi {
     });
     this.tabAll.addEventListener('click', () => void this.renderBoard('all'));
     this.tabDaily.addEventListener('click', () => void this.renderBoard('daily'));
+    this.tabSeason0.addEventListener('click', () => void this.renderBoard('season0'));
     for (const btn of this.modeBtns) {
       btn.addEventListener('click', () => {
         const mode = MODE_IDS.find((m) => m === btn.dataset.boardMode) ?? 'classic';
         this.boardMode = mode;
-        void this.renderBoard(mode === 'classic' ? this.tab : 'all');
+        void this.renderBoard(mode === 'classic' || this.tab !== 'daily' ? this.tab : 'all');
       });
     }
     window.addEventListener('online', () => void this.flushPending());
@@ -121,7 +125,7 @@ export class OnlineUi {
   async onGameOver(seed: string, encodedLog: string, mode: ModeId): Promise<void> {
     if (!ONLINE_CONFIGURED) return;
     const token = ++this.submitToken;
-    const run: PendingRun = { seed, log: encodedLog, mode, finishedAt: Date.now() };
+    const run: PendingRun = { seed, log: encodedLog, mode, ruleset: RULESET, finishedAt: Date.now() };
     this.lastScoreId = null;
     this.panel.hidden = false;
     this.shareBtn.disabled = true;
@@ -135,7 +139,7 @@ export class OnlineUi {
     this.setStatus('Checking your run with the swamp judges…', 'pending');
     try {
       const online = await this.load();
-      const result = await online.submitRun(seed, encodedLog, mode);
+      const result = await online.submitRun(seed, encodedLog, mode, RULESET);
       if (token !== this.submitToken) return;
       this.lastScoreId = result.id;
       this.shareBtn.disabled = false;
@@ -174,7 +178,7 @@ export class OnlineUi {
       for (const run of runs) {
         let status: SubmitStatus = 201;
         try {
-          await online.submitRun(run.seed, run.log, run.mode);
+          await online.submitRun(run.seed, run.log, run.mode, run.ruleset);
         } catch (err) {
           status = statusOf(err);
         }
@@ -273,7 +277,7 @@ export class OnlineUi {
     if (!ONLINE_CONFIGURED) return;
     this.backTo = from;
     this.boardMode = mode;
-    if (mode !== 'classic') this.tab = 'all';
+    if (mode !== 'classic' && this.tab === 'daily') this.tab = 'all';
     this.show('board');
     await this.renderBoard(this.tab);
   }
@@ -287,6 +291,8 @@ export class OnlineUi {
     this.tab = tab;
     this.tabAll.setAttribute('aria-selected', String(tab === 'all'));
     this.tabDaily.setAttribute('aria-selected', String(tab === 'daily'));
+    this.tabSeason0.setAttribute('aria-selected', String(tab === 'season0'));
+    this.boardSeason.textContent = tab === 'season0' ? 'Season 0 Hall of Fame' : `Season ${RULESET}`;
     // The Daily Swamp is classic-only, so "Today" exists only on the classic board.
     this.tabDaily.hidden = mode !== 'classic';
     for (const btn of this.modeBtns) btn.setAttribute('aria-pressed', String(btn.dataset.boardMode === mode));
@@ -295,7 +301,9 @@ export class OnlineUi {
     try {
       const online = await this.load();
       const [rows, me] = await Promise.all([
-        online.fetchBoard(tab, tab === 'daily' ? this.todayIso() : null, mode),
+        tab === 'season0'
+          ? online.fetchBoard('all', null, mode, 0)
+          : online.fetchBoard(tab, tab === 'daily' ? this.todayIso() : null, mode),
         online.currentUserId(),
       ]);
       if (this.tab !== tab || this.boardMode !== mode) return;
