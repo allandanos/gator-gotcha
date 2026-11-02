@@ -7,6 +7,7 @@
 | 2026-11-02 | 1 | done | death cam + juice |
 | 2026-11-02 | 2 | done | season 1 built locally; ships after the phase 1 KPI gate (on or after 2026-11-09) |
 | 2026-11-02 | 2 | re-scoped | classic day/night cycle (night swamp folded in), duckling dash mode, mixed campaign; no seasons. still local |
+| 2026-11-02 | 2 | live | owner shipped early (before the 11-09 phase 1 gate): migration applied, staging smoke passed, production deploy `gator-gotcha-j5r7po0vp` (commit `483786b`) |
 
 ## Evidence
 
@@ -524,3 +525,27 @@ Ruleset 1 had never reached production, and its only scores (the staging smoke r
 so there was no `RULESET` bump. The Classic golden snapshot moved to the evasive bot on `dusk4`
 (124 s, through nightfall at 60 s and daybreak at 90 s): `{ eggs: 0, score: 1240, ticks: 7456 }`.
 The same run without the cycle is caught at 5045 ticks, and a test asserts the two differ.
+
+**Release (2026-11-02, owner chose to ship before the Phase 1 gate):**
+1. **Migration.** The owner ran `supabase db push --linked`, which applied
+   `20261115000000_rulesets.sql`. A read-only check afterwards found the 117 existing rows at
+   `ruleset 0, banked 0` (Classic 109, Rush 3, Night 5), the Classic board unchanged (top
+   21,720), and the Duckling Dash board answering empty.
+2. **Staging.**
+   - Preview `gator-gotcha-6icyj9ieb` was built from `bd79a3a`. One anonymous test user ran
+     five checks:
+     - `ruleset: 0` → 409;
+     - an old client sending `night` → 409;
+     - `night` on ruleset 1 → 400;
+     - a fresh Classic run (`stgcls`) → 201: score 1300, 11 eggs, ruleset 1;
+     - a Duckling Dash run (`golden`) → 201: score 780, banked 4, ruleset 1.
+   - Both test scores (`3577b570-…`, `f6272c33-…`) and the test user (`e8187b45-…`) were then
+     deleted by id. The count was back to 117.
+   - Preview `gator-gotcha-rn1o56kl0` was built from `483786b` and serves the 90 s cycle copy.
+3. **Production.** The owner pushed `main` (`a3dcb44..483786b`), giving production deploy
+   `gator-gotcha-j5r7po0vp`, which is Ready. gatorgotcha.com serves the Duckling Dash card, the
+   night chip and "Night falls every 90 s". Boards: Classic, Egg Rush, and Duckling Dash. Within minutes Duckling Dash had its first real score (820).
+
+**Phase 1 KPI gate:** shipping before 2026-11-09 means the Phase 1 numbers after today mix in the
+Phase 2 changes. Read the Phase 1 gate from data before this deploy, and the Phase 2 gate from
+this deploy onward (`scores.ruleset = 1`).
