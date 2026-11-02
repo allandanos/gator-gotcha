@@ -52,15 +52,24 @@ export interface Gator {
   readonly waitTimer: number;
   readonly lastSeen: Vec | null;
   readonly grace: number;
+  /** Seconds left frozen after snapping a duckling: no moving, no seeing, no snapping. */
+  readonly stun: number;
 }
 
 export interface Egg {
   readonly id: number;
   readonly pos: Vec;
+  /** Worth `GOLDEN.ducklings` ducklings, and its splash carries further. */
+  readonly golden: boolean;
 }
 
 export type GameEvent =
   | { readonly type: 'pickup'; readonly pos: Vec }
+  /** `count` is the trail length after hatching. */
+  | { readonly type: 'hatch'; readonly pos: Vec; readonly count: number }
+  | { readonly type: 'snapped'; readonly pos: Vec }
+  | { readonly type: 'banked'; readonly pos: Vec; readonly count: number; readonly value: number }
+  | { readonly type: 'goldenPickup'; readonly pos: Vec }
   | { readonly type: 'spotted' }
   | { readonly type: 'lost' }
   | { readonly type: 'sprintStart' }
@@ -83,6 +92,17 @@ export interface World {
   readonly rngState: number;
   readonly time: number;
   readonly eggsCollected: number;
+  /** Ducklings trailing the duck, nearest first. */
+  readonly ducklings: readonly Vec[];
+  /** The duck's recent positions, newest first, capped at `TRAIL.max × TRAIL.lag + 1`. */
+  readonly trailHistory: readonly Vec[];
+  /** Score value banked at the nest so far. */
+  readonly banked: number;
+  /** Ducklings banked so far (what share cards and campaign goals count). */
+  readonly bankedDucklings: number;
+  readonly nest: Vec;
+  /** Golden eggs collected. */
+  readonly goldenEggs: number;
   /** Times the gator went from not-chasing to chasing. */
   readonly timesSpotted: number;
   readonly nextEggId: number;

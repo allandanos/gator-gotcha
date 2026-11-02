@@ -1,7 +1,7 @@
 import { DUCK, GATOR } from '../config.js';
 import { difficultyLevel, gatorStats } from './difficulty.js';
 import { rulesForMode } from './rules.js';
-import { computeScore, scoreOf } from './scoring.js';
+import { bankValue, computeScore, scoreOf } from './scoring.js';
 import { createWorld } from './world.js';
 
 describe('difficulty', () => {
@@ -30,15 +30,27 @@ describe('difficulty', () => {
     expect(gatorStats(1e6, 1e6, rulesForMode('rush')).level).toBe(1);
   });
 
-  it('scores eggs and whole seconds', () => {
-    expect(computeScore(3, 12.9)).toBe(3 * 100 + 12 * 10);
+  it('counts carried ducklings as eggs, so a long trail raises the pressure', () => {
+    expect(gatorStats(30, 2, undefined, 6).level).toBeCloseTo(gatorStats(30, 8).level);
+    expect(gatorStats(30, 2, undefined, 6).speed).toBeGreaterThan(gatorStats(30, 2).speed);
+  });
+
+  it('scores banked value and whole seconds', () => {
+    expect(computeScore(560, 12.9)).toBe(560 + 12 * 10);
+  });
+
+  it('pays more per duckling the longer the banked chain (appendix values)', () => {
+    expect([1, 3, 4, 6, 10, 12].map(bankValue)).toEqual([110, 390, 560, 960, 2000, 2640]);
   });
 
   it('scores rush runs on eggs plus a bonus for surviving the clock', () => {
     const w = createWorld('score', rulesForMode('rush'));
     expect(scoreOf({ ...w, eggsCollected: 4, time: 60 })).toBe(400);
     expect(scoreOf({ ...w, eggsCollected: 4, time: 90, status: 'timeUp' })).toBe(900);
+    // Rush ignores the bank; Classic ignores raw eggs: only banked ducklings pay.
+    expect(scoreOf({ ...w, eggsCollected: 4, banked: 560, time: 60 })).toBe(400);
     const c = createWorld('score');
-    expect(scoreOf({ ...c, eggsCollected: 3, time: 12.9 })).toBe(computeScore(3, 12.9));
+    expect(scoreOf({ ...c, eggsCollected: 3, banked: 0, time: 12.9 })).toBe(120);
+    expect(scoreOf({ ...c, eggsCollected: 3, banked: 390, time: 12.9 })).toBe(computeScore(390, 12.9));
   });
 });

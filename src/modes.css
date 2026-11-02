@@ -142,11 +142,11 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 8px;
+  gap: clamp(5px, 1.5vw, 8px);
   margin: -4px 0 12px;
 }
 .mode-switch__btn {
-  padding: 5px 14px;
+  padding: 5px clamp(9px, 3vw, 14px);
   font: 1rem var(--font-display);
   color: var(--ink);
   background: var(--paper);

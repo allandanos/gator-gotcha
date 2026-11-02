@@ -45,9 +45,21 @@ vercel deploy --prod
 - **Gator modes**: *wander* (yellow cone) → *chase* (red, `!`) when you're in its cone with clear
   line of sight → *search* (orange, `?`) at your last-seen spot for 3 s → back to wander.
 - Picking up an egg makes a splash the gator can hear within 450 u.
-- Difficulty rises with time and eggs: gator speed 150 → 270 (always below your 300 dash), cone
-  range 260 → 480, cone angle 70° → 110°.
-- Score = eggs × 100 + seconds survived × 10. Best score is stored in localStorage, per mode.
+- **Ducklings (Season 1).** Each egg hatches a duckling that trails behind you (up to 12). Lead
+  them into the **nest** (the woven ring where you started) to bank them. Banking `n` at once pays
+  `round(100 × n × (1 + 0.1 × n))`: 1 → 110, 4 → 560, 12 → 2,640. Ducklings you haven't banked
+  are worth nothing when you're caught.
+- **Greed has a cost.** Carried ducklings count as eggs for difficulty. From 4 ducklings on, the
+  gator can spot you by seeing the tail of the line. And it can snap the last duckling instead of
+  you, then stops for 1.2 s to swallow.
+- **Golden egg.** About 1 refill in 12 is golden: it hatches 5 ducklings, and its splash carries
+  twice as far. There's never more than one on the field.
+- Difficulty rises with time, eggs and the ducklings you carry: gator speed 150 → 270 (always
+  below your 300 dash), cone range 260 → 480, cone angle 70° → 110°.
+- Score = banked value + seconds survived × 10. Best score is stored in localStorage, per mode.
+- **Seasons.** Every score-affecting rule is versioned (`RULESET` in `src/config.ts`). Boards
+  are per season, and the server rejects runs from an older build with a 409 ("please reload").
+  Scores from before ducklings are archived as the Season 0 Hall of Fame.
 
 ### Modes
 
@@ -56,8 +68,8 @@ mode is replayed by the server and has its own leaderboard. The Daily Swamp is a
 
 | Mode | Rules | Score |
 |---|---|---|
-| Classic | the endless chase above | eggs × 100 + seconds × 10 |
-| Egg Rush | 90 s clock, 8 eggs on the field, gator starts at 20 % difficulty | eggs × 100, +500 if you're still alive at 0:00 |
+| Classic | the endless chase above | banked value + seconds × 10 |
+| Egg Rush | 90 s clock, 8 eggs on the field, gator starts at 20 % difficulty; no ducklings | eggs × 100, +500 if you're still alive at 0:00 |
 | Night Swamp | lantern light only; gator sight × 0.65, hearing × 1.5 | as Classic |
 
 Modes are `RunRules` values (`src/sim/rules.ts`); `?mode=rush|night` in the URL picks one.
@@ -65,7 +77,7 @@ Modes are `RunRules` values (`src/sim/rules.ts`); `?mode=rush|night` in the URL 
 ### Campaign
 
 12 curated levels in three worlds (Reed Shallows, Moonlit Marsh at 6 ★, Bayou Rush at 15 ★).
-Each level is a fixed seed plus rules: a goal (grab N eggs, or survive N seconds), sometimes a
+Each level is a fixed seed plus rules: a goal (bank N ducklings, or survive N seconds), sometimes a
 clock, night, or a higher starting difficulty. Clearing earns ★; the other two stars come from a
 par time, an egg count, or how rarely you were spotted. Within a world, clearing a level opens
 the next. Progress is local (`gator-gotcha:campaign` in localStorage) and unranked: campaign runs

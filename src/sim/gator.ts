@@ -14,7 +14,7 @@ import {
 import { moveCircle } from './collision.js';
 import type { GatorStats } from './difficulty.js';
 import { centerOf, findPath, freeCells, gridClear } from './nav.js';
-import { canSee } from './sight.js';
+import { spotsDuck } from './sight.js';
 import type { GameEvent, GameMap, Gator } from './types.js';
 
 const WAYPOINT_REACHED = 14;
@@ -31,6 +31,7 @@ export function createGator(pos: Vec, heading: number): Gator {
     waitTimer: GATOR.spawnGrace,
     lastSeen: null,
     grace: GATOR.spawnGrace,
+    stun: 0,
   };
 }
 
@@ -42,6 +43,10 @@ export interface GatorContext {
   readonly dt: number;
   /** Position of an egg pickup this step, which the gator may hear. */
   readonly splash: Vec | null;
+  /** How far this step's splash carries; defaults to the gator's hearing radius. */
+  readonly splashRadius?: number;
+  /** The trail's tail when it is long enough to be seen (`visibleTail`), else null. */
+  readonly tail?: Vec | null;
 }
 
 export interface GatorResult {
@@ -62,7 +67,7 @@ export function perceive(g: Gator, ctx: GatorContext): GatorResult {
     range: ctx.stats.coneRange,
     angle: ctx.stats.coneAngle,
   };
-  const sees = g.grace <= 0 && canSee(cone, ctx.duckPos, ctx.map.obstacles);
+  const sees = g.grace <= 0 && spotsDuck(cone, ctx.duckPos, ctx.tail ?? null, ctx.map.obstacles);
   if (sees) {
     const events: GameEvent[] = g.mode === 'chase' ? [] : [{ type: 'spotted' }];
     return { gator: { ...g, mode: 'chase', lastSeen: ctx.duckPos, target: null }, events };
@@ -80,7 +85,7 @@ export function perceive(g: Gator, ctx: GatorContext): GatorResult {
       events: [{ type: 'lost' }],
     };
   }
-  if (ctx.splash && dist(g.pos, ctx.splash) <= ctx.stats.hearRadius) {
+  if (ctx.splash && dist(g.pos, ctx.splash) <= (ctx.splashRadius ?? ctx.stats.hearRadius)) {
     return {
       gator: {
         ...g,
@@ -159,6 +164,8 @@ function plan(g: Gator, ctx: GatorContext): { gator: Gator; aim: Vec | null; spe
 }
 
 export function updateGator(g0: Gator, ctx: GatorContext): GatorResult {
+  // Busy with a mouthful of duckling: frozen in place, deaf and blind until the stun wears off.
+  if (g0.stun > 0) return { gator: { ...g0, stun: Math.max(0, g0.stun - ctx.dt) }, events: [] };
   const ticking = { ...g0, grace: Math.max(0, g0.grace - ctx.dt) };
   const perceived = perceive(ticking, ctx);
   const planned = plan(perceived.gator, ctx);

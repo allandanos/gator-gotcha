@@ -180,3 +180,7 @@ do not decide alone.
 
 Find one with a short script that steps `createWorld` until `eggs.some(e => e.golden)`, and
 record it here and in `PROGRESS.md` (VERIFY).
+
+**Recorded (2026-11-02):** `gold0`, Classic. A golden egg is on the opening field at
+(1008, 94), and the nest is at (280, 560). Other hits: `gold1`, `gold2`, `gold8` and `gold11`.
+`gold3` has none. Re-check with `npx vitest run src/sim/world.test.ts -t golden`.

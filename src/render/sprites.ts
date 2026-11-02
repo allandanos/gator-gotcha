@@ -1,5 +1,6 @@
 import { DUCK, EGGS, GATOR } from '../config';
 import type { Rng } from '../core/rng';
+import type { Vec } from '../core/vec';
 import type { Duck, Gator, Obstacle } from '../sim/types';
 import { PALETTE as P } from './palette';
 
@@ -118,15 +119,16 @@ export function drawGrassDetail(ctx: Ctx, x: number, y: number, rng: Rng): void 
   }
 }
 
-export function drawEgg(ctx: Ctx, x: number, y: number, t: number, id: number): void {
+export function drawEgg(ctx: Ctx, x: number, y: number, t: number, id: number, golden = false): void {
   const bob = Math.sin(t * 4 + id) * 2;
-  const r = EGGS.radius;
+  const r = golden ? EGGS.radius * 1.2 : EGGS.radius;
+  if (golden) drawSparkle(ctx, x, y - 3, t);
   shadow(ctx, x, y + r, r * 0.9, r * 0.35);
   ctx.save();
   ctx.translate(x, y + bob - 3);
   ctx.rotate(Math.sin(t * 2 + id) * 0.12);
-  outlined(ctx, P.egg, () => ctx.ellipse(0, 0, r * 0.8, r, 0, 0, Math.PI * 2));
-  ctx.fillStyle = P.eggSpeck;
+  outlined(ctx, golden ? P.gold : P.egg, () => ctx.ellipse(0, 0, r * 0.8, r, 0, 0, Math.PI * 2));
+  ctx.fillStyle = golden ? P.goldSpeck : P.eggSpeck;
   for (const [sx, sy] of [
     [-3, -4],
     [3, 1],
@@ -140,6 +142,90 @@ export function drawEgg(ctx: Ctx, x: number, y: number, t: number, id: number): 
   ctx.beginPath();
   ctx.ellipse(-3, -5, 2, 3, -0.4, 0, Math.PI * 2);
   ctx.fill();
+  ctx.restore();
+}
+
+/** Four-point glints orbiting a golden egg. */
+function drawSparkle(ctx: Ctx, x: number, y: number, t: number): void {
+  ctx.save();
+  ctx.fillStyle = '#fffbe0';
+  for (let i = 0; i < 3; i++) {
+    const a = t * 1.6 + (i * Math.PI * 2) / 3;
+    const s = 3 + 2.5 * Math.abs(Math.sin(t * 5 + i * 2));
+    ctx.save();
+    ctx.translate(x + Math.cos(a) * 22, y + Math.sin(a) * 18);
+    ctx.beginPath();
+    for (let k = 0; k < 8; k++) {
+      const rr = k % 2 ? s * 0.3 : s;
+      ctx.lineTo(Math.cos((k * Math.PI) / 4) * rr, Math.sin((k * Math.PI) / 4) * rr);
+    }
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+/** A woven ring on the duck's spawn; it glows while the duck has ducklings to bring home. */
+export function drawNest(ctx: Ctx, at: Vec, radius: number, t: number, glowing: boolean): void {
+  ctx.save();
+  ctx.translate(at.x, at.y);
+  if (glowing) {
+    const pulse = 0.55 + 0.25 * Math.sin(t * 4);
+    const glow = ctx.createRadialGradient(0, 0, radius * 0.4, 0, 0, radius * 1.6);
+    glow.addColorStop(0, `rgba(255, 228, 110, ${pulse})`);
+    glow.addColorStop(1, 'rgba(255, 228, 110, 0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(0, 0, radius * 1.6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = P.ink;
+  ctx.fillStyle = P.nest;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius, 0, Math.PI * 2);
+  ctx.arc(0, 0, radius * 0.62, 0, Math.PI * 2, true);
+  ctx.fill('evenodd');
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(0, 0, radius * 0.62, 0, Math.PI * 2);
+  ctx.stroke();
+  // Weave: short twig strokes around the ring.
+  ctx.strokeStyle = P.nestDark;
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 14; i++) {
+    const a = (i * Math.PI * 2) / 14;
+    const r0 = radius * 0.68;
+    const r1 = radius * 0.94;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a) * r0, Math.sin(a) * r0);
+    ctx.lineTo(Math.cos(a + 0.3) * r1, Math.sin(a + 0.3) * r1);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/** A small yellow duckling; `index` offsets its bob so the trail ripples. */
+export function drawDuckling(ctx: Ctx, at: Vec, facing: number, t: number, index: number): void {
+  const r = DUCK.radius * 0.62;
+  const bob = Math.sin(t * 12 + index * 0.9) * 1.6;
+  shadow(ctx, at.x, at.y + r * 0.8, r * 1.1, r * 0.4);
+  ctx.save();
+  ctx.translate(at.x, at.y + bob);
+  ctx.rotate(facing);
+  outlined(ctx, P.duckling, () => ctx.ellipse(0, 0, r, r * 0.85, 0, 0, Math.PI * 2));
+  outlined(ctx, P.duckling, () => ctx.arc(r * 0.7, 0, r * 0.6, 0, Math.PI * 2));
+  ctx.fillStyle = P.bill;
+  ctx.beginPath();
+  ctx.ellipse(r * 1.3, 0, r * 0.35, r * 0.2, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = P.pupil;
+  for (const s of [-1, 1]) {
+    ctx.beginPath();
+    ctx.arc(r * 0.85, s * r * 0.28, 1.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
   ctx.restore();
 }
 

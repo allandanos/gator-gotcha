@@ -7,6 +7,8 @@ export type ModeId = (typeof MODE_IDS)[number];
 /** A level's clear condition: whichever is set must be reached. */
 export interface Goal {
   readonly eggs?: number;
+  /** Ducklings banked at the nest. */
+  readonly ducklings?: number;
   readonly surviveSec?: number;
 }
 
@@ -25,6 +27,8 @@ export interface RunRules {
   /** Render hint: lantern fog. Sight and hearing changes come from the factors above. */
   readonly night: boolean;
   readonly scoring: 'classic' | 'rush';
+  /** Season 1 greed loop: eggs hatch into a trail that is banked at the nest; golden eggs. */
+  readonly ducklings: boolean;
 }
 
 export const CLASSIC: RunRules = {
@@ -37,6 +41,7 @@ export const CLASSIC: RunRules = {
   eggsOnField: EGGS.onField,
   night: false,
   scoring: 'classic',
+  ducklings: true,
 };
 
 export const NIGHT_RULES: Pick<RunRules, 'coneRangeFactor' | 'hearFactor' | 'night'> = {
@@ -54,6 +59,8 @@ const RULES: Readonly<Record<ModeId, RunRules>> = {
     eggsOnField: MODES.rush.eggsOnField,
     startLevel: MODES.rush.startLevel,
     scoring: 'rush',
+    // Rush stays a pure egg sprint (owner decision, phase 2).
+    ducklings: false,
   },
   night: { ...CLASSIC, ...NIGHT_RULES, mode: 'night' },
 };

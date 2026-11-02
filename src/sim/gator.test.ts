@@ -90,4 +90,33 @@ describe('gator AI', () => {
     for (let i = 0; i < 60 * 12; i++) g = updateGator(g, ctx(map, hidden)).gator;
     expect(g.pos.x).toBeGreaterThan(1000);
   });
+
+  it('freezes while stunned: no moving, no seeing, and the stun runs down', () => {
+    const g = { ...ready(createGator({ x: 800, y: 500 }, 0)), stun: 0.5 };
+    const r = updateGator(g, ctx(open, { x: 900, y: 500 }));
+    expect(r.gator.pos).toEqual(g.pos);
+    expect(r.gator.mode).toBe('wander');
+    expect(r.events).toEqual([]);
+    expect(r.gator.stun).toBeCloseTo(0.5 - SIM_DT);
+  });
+
+  it('spots the duck through a visible trail tail', () => {
+    const wall: Obstacle = { kind: 'log', x: 850, y: 380, w: 36, h: 100 };
+    const map = mapWith([wall]);
+    const g = ready(createGator({ x: 800, y: 500 }, 0));
+    const duck = { x: 950, y: 420 }; // behind the log
+    expect(updateGator(g, ctx(map, duck)).gator.mode).toBe('wander');
+    const seen = updateGator(g, ctx(map, duck, { tail: { x: 950, y: 520 } }));
+    expect(seen.gator.mode).toBe('chase');
+    expect(seen.events).toContainEqual({ type: 'spotted' });
+  });
+
+  it('hears a louder splash from further away', () => {
+    const g = ready({ ...createGator({ x: 100, y: 100 }, Math.PI), waitTimer: 0 });
+    const far = { x: 100 + GATOR.splashHearRadius * 1.5, y: 100 };
+    const hidden = { x: -999, y: -999 };
+    expect(updateGator(g, ctx(open, hidden, { splash: far })).gator.mode).not.toBe('search');
+    const loud = updateGator(g, ctx(open, hidden, { splash: far, splashRadius: GATOR.splashHearRadius * 2 }));
+    expect(loud.gator.mode).toBe('search');
+  });
 });

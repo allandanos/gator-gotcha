@@ -59,19 +59,41 @@ describe('replayRun', () => {
   it('reproduces the locally recorded score', () => {
     const { log, score } = record('golden', 3);
     const out = replayRun('golden', decodeLog(encodeLog(log)));
-    expect(out).toEqual({ ok: true, score, eggs: expect.any(Number), ticks: log.length });
+    expect(out).toEqual({
+      ok: true,
+      score,
+      eggs: expect.any(Number),
+      banked: expect.any(Number),
+      ticks: log.length,
+    });
   });
 
-  it('matches a golden snapshot (guards determinism regressions)', () => {
-    const { log } = record('golden', 3);
+  it('matches a golden snapshot (guards determinism regressions; regenerate per RULESET)', () => {
+    // Ruleset 1. Bot 4 banks on this swamp, so the snapshot covers hatching and banking.
+    const { log, banked } = record('golden', 4);
+    expect(banked).toBeGreaterThan(0);
     expect(replayRun('golden', log)).toMatchInlineSnapshot(`
       {
-        "eggs": 2,
+        "banked": 4,
+        "eggs": 4,
         "ok": true,
-        "score": 310,
-        "ticks": 674,
+        "score": 780,
+        "ticks": 1832,
       }
     `);
+  });
+
+  it('gives the same result replaying the same log twice, over 50 seeds', () => {
+    let banking = 0;
+    for (let i = 0; i < 50; i++) {
+      const seed = `det${i}`;
+      const { log, score, banked } = record(seed, i);
+      const a = replayRun(seed, log);
+      expect(a).toEqual(replayRun(seed, log));
+      expect(a).toMatchObject({ ok: true, score, banked });
+      if (banked > 0) banking++;
+    }
+    expect(banking).toBeGreaterThan(25);
   });
 
   it('rejects a log replayed on a different seed or with trailing / missing input', () => {
@@ -109,6 +131,7 @@ describe('replayRun per mode', () => {
       ok: true,
       score: 500,
       eggs: 0,
+      banked: 0,
       ticks: log.length,
     });
     expect(replayRun('buzz36', [...log, 0], 'rush')).toEqual({

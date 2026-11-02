@@ -21,7 +21,11 @@ export default defineConfig({
   base: '/',
   define: { __APP_VERSION__: JSON.stringify(appVersion()) },
   // The privacy page is its own entry so its stylesheet is a same-origin file the CSP allows.
-  build: { rollupOptions: { input: { main: 'index.html', privacy: 'privacy.html' } } },
+  build: {
+    // terser keeps the main chunk inside its 30 KB gzip budget (esbuild's output is ~1.3 KB larger).
+    minify: 'terser',
+    rollupOptions: { input: { main: 'index.html', privacy: 'privacy.html' } },
+  },
   plugins: [
     VitePWA({
       // 'prompt' keeps a downloaded update waiting until src/ui/updates.ts finds a moment that

@@ -124,6 +124,17 @@ body {
 .chip--score dt {
   color: var(--ink);
 }
+.chip--carry {
+  white-space: nowrap;
+  transition: background-color var(--duration-normal);
+}
+/* Ducklings in tow: amber like a fuse, a nudge to head home. */
+.chip--carry[data-full='true'] {
+  background: var(--amber);
+}
+.chip--carry[data-full='true'] dt {
+  color: var(--ink);
+}
 .hud-right {
   display: flex;
   align-items: center;
@@ -762,7 +773,8 @@ code {
   box-shadow: var(--pop);
 }
 .tab {
-  padding: 8px 20px;
+  padding: 8px clamp(10px, 3.5vw, 20px);
+  white-space: nowrap;
   font: 1.05rem var(--font-display);
   color: var(--ink);
   background: var(--paper);

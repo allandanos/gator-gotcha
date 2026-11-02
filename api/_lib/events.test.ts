@@ -111,6 +111,14 @@ describe('normalizeBatch', () => {
     ]);
   });
 
+  it('carries ducklings banked on run_end, clamped to a whole count', () => {
+    const out = norm([
+      ev('run_end', { sec: 30, eggs: 5, banked: 4, score: 860 }),
+      ev('run_end', { sec: 30, eggs: 5, banked: -3.5, score: 860 }),
+    ]).events;
+    expect(out.map((e) => e.props.banked)).toEqual([4, 0]);
+  });
+
   it('truncates long strings', () => {
     const [e] = norm([ev('title_view', { installed: false, referrer: 'x'.repeat(200) })]).events;
     expect(e?.props.referrer).toHaveLength(64);

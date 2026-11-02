@@ -25,7 +25,8 @@ function fakeRepo(overrides: Partial<ScoreRepository> = {}) {
   return { repo, inserted };
 }
 
-const run = recordBotRun('golden', 3);
+// Bot 4 banks on this swamp, so `banked` is non-zero end to end.
+const run = recordBotRun('golden', 4);
 const body = { ruleset: RULESET, seed: 'golden', log: encodeLog(run.log) };
 
 describe('submitScore', () => {
@@ -34,9 +35,9 @@ describe('submitScore', () => {
     const out = await submitScore(repo, 'good', body, NOW);
     expect(out).toEqual({
       ok: true,
-      result: { id: 'id-1', mode: 'classic', score: run.score, eggs: expect.any(Number), ticks: run.log.length, rank: 7, dailyRank: null },
+      result: { id: 'id-1', mode: 'classic', score: run.score, eggs: expect.any(Number), banked: run.banked, ticks: run.log.length, rank: 7, dailyRank: null },
     });
-    expect(inserted[0]).toMatchObject({ userId: USER, seed: 'golden', dailyDate: null, score: run.score });
+    expect(inserted[0]).toMatchObject({ userId: USER, seed: 'golden', dailyDate: null, score: run.score, banked: run.banked });
   });
 
   it('ignores any client-claimed score fields', async () => {

@@ -10,7 +10,14 @@ export const MAX_REPLAY_TICKS = 20 * 60 * 60;
 export const MAX_ENCODED_LOG = 64 * 1024;
 
 export type ReplayOutcome =
-  | { readonly ok: true; readonly score: number; readonly eggs: number; readonly ticks: number }
+  | {
+      readonly ok: true;
+      readonly score: number;
+      readonly eggs: number;
+      /** Ducklings banked at the nest (0 in modes without ducklings). */
+      readonly banked: number;
+      readonly ticks: number;
+    }
   | { readonly ok: false; readonly reason: 'empty' | 'too_long' | 'not_caught' | 'trailing_input' };
 
 /** Run-length encode (count ≤ 255, byte) pairs, then base64. */
@@ -68,6 +75,7 @@ export function replayRun(
         ok: true,
         score: scoreOf(world),
         eggs: world.eggsCollected,
+        banked: world.bankedDucklings,
         ticks: inputs.length,
       };
     }

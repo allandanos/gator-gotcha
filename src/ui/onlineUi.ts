@@ -277,7 +277,8 @@ export class OnlineUi {
     if (!ONLINE_CONFIGURED) return;
     this.backTo = from;
     this.boardMode = mode;
-    if (mode !== 'classic' && this.tab === 'daily') this.tab = 'all';
+    // Open on the current season; the Hall of Fame is a tab you choose each time.
+    if (this.tab === 'season0' || (mode !== 'classic' && this.tab === 'daily')) this.tab = 'all';
     this.show('board');
     await this.renderBoard(this.tab);
   }

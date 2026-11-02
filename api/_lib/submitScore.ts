@@ -29,6 +29,8 @@ export interface SubmitResult {
   readonly mode: ModeId;
   readonly score: number;
   readonly eggs: number;
+  /** Ducklings banked during the run. */
+  readonly banked: number;
   readonly ticks: number;
   readonly rank: number;
   readonly dailyRank: number | null;
@@ -95,6 +97,7 @@ export async function submitScore(
     dailyDate,
     score: replay.score,
     eggs: replay.eggs,
+    banked: replay.banked,
     ticks: replay.ticks,
     inputHash,
   });
@@ -113,6 +116,7 @@ export async function submitScore(
       mode,
       score: replay.score,
       eggs: replay.eggs,
+      banked: replay.banked,
       ticks: replay.ticks,
       rank,
       dailyRank,

@@ -1,5 +1,5 @@
 import { DUCK } from '../config';
-import { scoreOf } from '../sim/scoring';
+import { bankValue, scoreOf } from '../sim/scoring';
 import type { GatorMode, World } from '../sim/types';
 import { HINT_MS } from '../render/feel';
 import { $, formatTime } from './dom';
@@ -13,11 +13,21 @@ const STATUS: Record<GatorMode, string> = {
 /** Seconds left at which a countdown turns urgent. */
 const COUNTDOWN_WARN = 10;
 
+/** "×4 → +560": what banking the trail right now would pay. */
+export function carryText(n: number): string {
+  return n === 0 ? '0' : `×${n} → +${bankValue(n).toLocaleString('en-US')}`;
+}
+
 /** DOM heads-up display. Writes only when values change to avoid layout churn. */
 export class Hud {
   private readonly root = $('#hud');
   private readonly score = $('#hud-score');
   private readonly eggs = $('#hud-eggs');
+  private readonly eggsChip = $('#hud-eggs-chip');
+  private readonly carryChip = $('#hud-carry-chip');
+  private readonly carry = $('#hud-carry');
+  private readonly bankedChip = $('#hud-banked-chip');
+  private readonly banked = $('#hud-banked');
   private readonly time = $('#hud-time');
   private readonly timeChip = $('#hud-time-chip');
   private readonly timeLabel = $('#hud-time-label');
@@ -37,6 +47,8 @@ export class Hud {
   private last = {
     score: '',
     eggs: '',
+    carry: '',
+    banked: '',
     time: '',
     mode: '',
     stamina: -1,
@@ -58,8 +70,14 @@ export class Hud {
     const goal = w.rules.goal;
     this.scoreChip.hidden = goal !== null;
     this.goalChip.hidden = goal === null;
-    this.goalLabel.textContent = goal?.eggs !== undefined ? 'Goal' : 'Survive';
-    this.last = { ...this.last, time: '', warn: false, goal: '', pace: '' };
+    this.goalLabel.textContent =
+      goal?.ducklings !== undefined ? 'Bank' : goal?.eggs !== undefined ? 'Goal' : 'Survive';
+    // Season 1 shows the trail and the bank; Egg Rush still counts eggs.
+    const s1 = w.rules.ducklings;
+    this.eggsChip.hidden = s1;
+    this.carryChip.hidden = !s1;
+    this.bankedChip.hidden = !s1 || goal !== null;
+    this.last = { ...this.last, time: '', warn: false, goal: '', pace: '', carry: '', banked: '' };
     this.paceChip.hidden = true;
     this.clearHints();
   }
@@ -105,6 +123,9 @@ export class Hud {
   private goalText(w: World): string {
     const goal = w.rules.goal;
     if (!goal) return '';
+    if (goal.ducklings !== undefined) {
+      return `${Math.min(w.bankedDucklings, goal.ducklings)}/${goal.ducklings}`;
+    }
     if (goal.eggs !== undefined) return `${Math.min(w.eggsCollected, goal.eggs)}/${goal.eggs}`;
     return formatTime(Math.ceil(Math.max(0, (goal.surviveSec ?? 0) - w.time)));
   }
@@ -123,6 +144,13 @@ export class Hud {
     const stamina = Math.round((w.duck.stamina / DUCK.staminaMax) * 100) / 100;
     if (score !== this.last.score) this.score.textContent = score;
     if (eggs !== this.last.eggs) this.eggs.textContent = eggs;
+    const carry = carryText(w.ducklings.length);
+    if (carry !== this.last.carry) {
+      this.carry.textContent = carry;
+      this.carryChip.dataset.full = String(w.ducklings.length > 0);
+    }
+    const banked = String(w.bankedDucklings);
+    if (banked !== this.last.banked) this.banked.textContent = banked;
     if (time !== this.last.time) this.time.textContent = time;
     if (stamina !== this.last.stamina) {
       this.staminaFill.style.transform = `scaleX(${stamina})`;
@@ -138,6 +166,8 @@ export class Hud {
       ...this.last,
       score,
       eggs,
+      carry,
+      banked,
       time,
       mode: w.gator.mode,
       stamina,

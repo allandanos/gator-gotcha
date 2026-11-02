@@ -42,6 +42,8 @@ const CATALOGUE: Readonly<Record<string, Readonly<Record<string, PropNormalizer>
   run_end: {
     sec: num(0, 1200, false),
     eggs: num(0, 10_000, true),
+    /** Ducklings banked (Season 1); feeds the "≥ 70 % of runs bank" gate. */
+    banked: num(0, 10_000, true),
     score: num(0, MAX_SCORE, true),
     mode,
     level,

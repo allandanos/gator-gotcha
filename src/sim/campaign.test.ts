@@ -29,23 +29,26 @@ describe('campaign levels', () => {
 
   it('builds campaign rules from each level, with night factors on night levels', () => {
     const lantern = levelById(5)!;
-    expect(lantern.rules).toMatchObject({ mode: 'campaign', night: true, goal: { eggs: 4 } });
+    expect(lantern.rules).toMatchObject({ mode: 'campaign', night: true, ducklings: true, goal: { ducklings: 4 } });
     expect(lantern.rules.coneRangeFactor).toBeLessThan(1);
     const frenzy = levelById(11)!;
-    expect(frenzy.rules).toMatchObject({ timeLimit: 90, eggsOnField: 8, night: false });
+    expect(frenzy.rules).toMatchObject({ timeLimit: 105, eggsOnField: 8, night: false });
     expect(createWorld(frenzy.seed, frenzy.rules).eggs).toHaveLength(8);
     expect(levelById(0)).toBeNull();
     expect(levelById(13)).toBeNull();
   });
 
-  it('every goal can actually be met: gated by eggs or time, never both unset', () => {
-    for (const l of LEVELS)
-      expect(l.goal.eggs !== undefined || l.goal.surviveSec !== undefined).toBe(true);
+  it('every goal can actually be met: gated by banking or time, never unset', () => {
+    for (const l of LEVELS) {
+      expect(l.goal.ducklings !== undefined || l.goal.surviveSec !== undefined).toBe(true);
+      // Banking more than a full trail at once is fine: goals count across several trips.
+      if (l.goal.ducklings && l.rules.timeLimit) expect(l.rules.timeLimit).toBeGreaterThan(45);
+    }
   });
 });
 
 describe('stars', () => {
-  const first = levelById(1)!; // 3 eggs; ★★ ≤30 s; ★★★ unseen
+  const first = levelById(1)!; // bank 3; ★★ ≤45 s; ★★★ unseen
 
   it('gives nothing for a failed run', () => {
     expect(starsFor(first, run({ status: 'caught' }))).toBe(0);
@@ -54,9 +57,9 @@ describe('stars', () => {
 
   it('gives one star per condition met on top of clearing', () => {
     expect(starsFor(first, run({ time: 50, timesSpotted: 2 }))).toBe(1);
-    expect(starsFor(first, run({ time: 25, timesSpotted: 2 }))).toBe(2);
+    expect(starsFor(first, run({ time: 40, timesSpotted: 2 }))).toBe(2);
     expect(starsFor(first, run({ time: 50, timesSpotted: 0 }))).toBe(2);
-    expect(starsFor(first, run({ time: 25, timesSpotted: 0 }))).toBe(3);
+    expect(starsFor(first, run({ time: 40, timesSpotted: 0 }))).toBe(3);
   });
 
   it('checks each condition kind', () => {
@@ -67,10 +70,27 @@ describe('stars', () => {
 
   it('describes goals and star conditions for the UI', () => {
     expect(describeGoal({ eggs: 6 })).toBe('Grab 6 eggs');
+    expect(describeGoal({ ducklings: 6 })).toBe('Bank 6 ducklings');
     expect(describeGoal({ surviveSec: 45 })).toBe('Survive 45 s');
     expect(describeStar({ parSec: 30 })).toBe('Clear in 30 s');
     expect(describeStar({ minEggs: 3 })).toBe('Grab 3 eggs');
     expect(describeStar({ maxSpotted: 0 })).toBe('Never get spotted');
     expect(describeStar({ maxSpotted: 2 })).toBe('Spotted 2× at most');
+  });
+});
+
+describe('season 1 campaign goals', () => {
+  it('clears a banking goal once enough ducklings are banked, across trips', async () => {
+    const { step } = await import('./world.js');
+    const l = levelById(1)!;
+    const w = createWorld(l.seed, l.rules);
+    const calm = { ...w, gator: { ...w.gator, pos: { x: 1550, y: 950 }, grace: 999 } };
+    const home = { ...calm, duck: { ...calm.duck, pos: calm.nest } };
+    const idle = { move: { x: 0, y: 0 }, sprint: false };
+    const two = step({ ...home, ducklings: [home.nest, home.nest] }, idle, 1 / 60);
+    expect(two.status).toBe('playing');
+    const three = step({ ...two, ducklings: [two.nest] }, idle, 1 / 60);
+    expect(three.status).toBe('cleared');
+    expect(three.bankedDucklings).toBe(3);
   });
 });

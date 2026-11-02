@@ -32,6 +32,8 @@ describe('share page', () => {
       dailyDate: null,
       score: 2340,
       eggs: 12,
+      ruleset: 0,
+      banked: 0,
       ticks: 3600,
       nickname: '<script>x',
     });
@@ -49,6 +51,8 @@ describe('share page', () => {
       dailyDate: '2026-10-31',
       score: 10,
       eggs: 1,
+      ruleset: 0,
+      banked: 0,
       ticks: 60,
       nickname: 'Duck',
     });
@@ -66,10 +70,28 @@ describe('share page', () => {
       dailyDate: null,
       score: 900,
       eggs: 4,
+      ruleset: 1,
+      banked: 0,
       ticks: 5400,
       nickname: 'Duck',
     });
     expect(html).toContain('Egg Rush: 4 eggs, survived 1:30');
     expect(html).toContain('/?seed=abc123&#38;challenge=11111111-1111-4111-8111-111111111111&#38;mode=rush');
+  });
+
+  it('says how many ducklings a Season 1 run banked', () => {
+    const html = renderSharePage('https://g.example', {
+      id: '11111111-1111-4111-8111-111111111111',
+      seed: 'abc123',
+      mode: 'classic',
+      ruleset: 1,
+      dailyDate: null,
+      score: 2640,
+      eggs: 14,
+      banked: 12,
+      ticks: 3600,
+      nickname: 'Duck',
+    });
+    expect(html).toContain('banked 12 ducklings, survived 1:00');
   });
 });

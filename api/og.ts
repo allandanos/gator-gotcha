@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { Resvg } from '@resvg/resvg-js';
 import satori from 'satori';
 import { isUuid, logError } from './_lib/http.js';
-import { formatScore, formatTicks } from './_lib/format.js';
+import { formatScore, formatTicks, haulStat } from './_lib/format.js';
 import { MODE_LABELS } from '../src/sim/rules.js';
 import { supabaseRepository, type SharedScore } from './_lib/repository.js';
 
@@ -59,7 +59,7 @@ function card(s: SharedScore | null): Node {
           ? [
               h('div', { fontSize: 150, color: '#ffd84d', textShadow: `6px 6px 0 ${INK}`, lineHeight: 1 }, formatScore(s.score)),
               h('div', { display: 'flex', marginTop: 18 }, [
-                stat('Eggs', String(s.eggs)),
+                stat(...haulStat(s)),
                 stat('Survived', formatTicks(s.ticks)),
                 stat('Swamp', s.dailyDate ? 'Daily' : s.seed),
               ]),

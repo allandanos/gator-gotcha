@@ -1,4 +1,4 @@
-import { GATOR } from '../config.js';
+import { GATOR, TRAIL } from '../config.js';
 import { angleDiff, angleOf, dist, fromAngle, sub, type Vec } from '../core/vec.js';
 import { segmentEntryT, segmentIntersectsRect } from './geometry.js';
 import type { Obstacle } from './types.js';
@@ -24,6 +24,21 @@ export function inCone(cone: Cone, p: Vec): boolean {
 
 export function canSee(cone: Cone, p: Vec, obstacles: readonly Obstacle[]): boolean {
   return inCone(cone, p) && hasLineOfSight(cone.origin, p, obstacles);
+}
+
+/** The last duckling, once the trail is long enough to give the duck away; otherwise null. */
+export function visibleTail(ducklings: readonly Vec[]): Vec | null {
+  return ducklings.length >= TRAIL.visibleFrom ? (ducklings[ducklings.length - 1] ?? null) : null;
+}
+
+/** Whether the gator spots the duck: the duck itself, or its trail's tail when that shows. */
+export function spotsDuck(
+  cone: Cone,
+  duckPos: Vec,
+  tail: Vec | null,
+  obstacles: readonly Obstacle[],
+): boolean {
+  return canSee(cone, duckPos, obstacles) || (tail !== null && canSee(cone, tail, obstacles));
 }
 
 /** Distance a ray travels from `origin` before hitting an obstacle, capped at `maxLen`. */

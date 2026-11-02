@@ -5,6 +5,7 @@
 | 2026-11-01 | 0 | done | events live |
 | 2026-11-02 | modes | live |  egg rush, night swamp, campaign (out of band, before phase 1) |
 | 2026-11-02 | 1 | done | death cam + juice |
+| 2026-11-02 | 2 | done | season 1 built locally; ships after the phase 1 KPI gate (on or after 2026-11-09) |
 
 ## Evidence
 
@@ -231,3 +232,193 @@ LOW: the props are client-reported, like every other event prop; they are analyt
 - Chrome, fresh isolated context: the title shows today's seed `d20261102`; the card has 4 run-stat fields;
   `window.__gator` is absent; there are no console errors or warnings. No run was played on production.
 - KPI gate window starts 2026-11-02: retries/session ≥ 3 and D1 ≥ 20 %, Classic only, after 7 days.
+
+### Phase 2
+
+**Baseline (2026-11-02, `d834aee`):** `npm test` 29 files / 238 passed · lint + build exit 0 ·
+`grep -c "| 1 | done" PROGRESS.md` → 1.
+
+**Phase 1 KPI gate: not measurable yet.** Read with the service role, read-only, Classic only, with
+`local-test` and `phase1-smoke` excluded.
+- Phase 1 went live at about 01:00 UTC today. The latest event was at `2026-11-02T01:10Z`.
+- Retries per session since then: 1 session, mean 1.0. That is too few to judge (target ≥ 3).
+- D1 (`events_retention`): the 2026-11-01 cohort is 3/14 = 21.4 % (target ≥ 20 %), but those
+  players arrived before Phase 1.
+
+**Owner decisions (this session):**
+- **Build now, ship after the gate.** Phase 2 is built and committed locally but not pushed until
+  the Phase 1 gate is read on or after 2026-11-09, so Season 1 doesn't muddy Phase 1's numbers.
+- **Where Season 1 applies:** Classic, Night and Campaign. **Egg Rush keeps its old rules**
+  (`RunRules.ducklings = false`). Its sim is bit-identical: the `buzz36` 500-point replay and the
+  Rush bot replays pass unchanged.
+
+**Decisions taken:**
+- **Missing `ruleset`:** a submission without one counts as `0`, so clients from before seasons
+  get a **409** "Game updated: please reload" and their queues drop the run. A bad type is
+  still a 400. The ruleset check runs before the replay, which keeps stale runs cheap.
+- **Dedupe hash:** it is now `sha256("r<RULESET>:<mode>:<seed>:<log>")`. The same log under new
+  rules is a new run. Runs queued before Season 1 can't collide, because they 409 first.
+- **`app_config.current_ruleset` is seeded `0`,** so live boards don't change before the Season 1
+  client ships. The new client always asks for `season = RULESET` explicitly; only old cached
+  clients use the null default. **At deploy:** `update public.app_config set current_ruleset = 1;`
+- **`season` is an `integer` parameter,** not `smallint`. A plain `1` doesn't resolve to a
+  `smallint` parameter (verified), so `integer` saves every caller from needing a cast. The
+  column stays `smallint`.
+- **New `scores.banked` column:** it records ducklings banked, for share and OG copy ("banked 12
+  ducklings"). `replayRun` returns `banked` (a ducklings count), and so does the submit response.
+- **Step order:**
+  1. The duck moves, and the trail follows.
+  2. Pickups hatch ducklings.
+  3. The trail banks if the duck is in the nest.
+  4. The gator moves.
+  5. Tail snap.
+  6. Duck catch.
+
+  Banking comes before the gator, so arriving at the nest pays out even if the gator lands on
+  the tail that tick.
+- **Trail:**
+  - Each duckling steers for the duck's position `lag × place` ticks ago, but only if that point
+    is at least one spacing back from the duckling ahead and closer than the leader.
+  - Otherwise it holds its ground, and it is then held at exactly `TRAIL.spacing` from its leader.
+  - Ducklings stay put when the duck stops, and new ones line up behind the tail.
+- **Snap and stun:**
+  - A snap gives `Gator.stun = 1.2 s`. While stunned the gator can't move, see, hear or snap.
+  - The duck itself can still walk into its mouth.
+  - Snapping uses `isCaught` against the tail.
+- **Tail sight:** `spotsDuck` sees the duck, or the tail once there are 4 or more ducklings.
+  Seeing the tail starts a chase toward the duck.
+- **Golden egg:**
+  - The chance is rolled only under Season 1 rules, so other modes draw the same random numbers.
+  - Only one golden egg can be on the field at once.
+  - Its splash radius is the gator's hearing radius × 2. That includes Night's ×1.5 hearing,
+    which the spec's `GATOR.splashHearRadius × 2` didn't mention.
+- **Nest:** the nest is `World.nest = map.duckSpawn`. Spawn clearance (140 u) already exceeds the
+  nest radius plus the duck radius (64 u), and the test now asserts it. A new
+  `NEST.eggClearance = 200` keeps new eggs out of the nest, so every bank means a trip.
+- **Difficulty:** `gatorStats(time, eggs, rules, carried)`. Carried ducklings count on top of the
+  eggs collected.
+- **Campaign:**
+  - Egg goals became "Bank N ducklings" (same N).
+  - Par times rose by about 30 % (for example 30 → 45 s).
+  - The clocks on levels 8, 9 and 11 went from 60/45/90 to 75/60/105 s.
+  - The banking bot clears levels 1, 3 and 5 (8/8, 8/8 and 5/8 bot seeds) and sometimes 8 and 9.
+    It is far weaker than people, so **the campaign still needs a human playtest.**
+- **HUD:**
+  - A "Carrying ×n → +value" chip (amber while carrying) and a "Banked" count replace the Eggs
+    chip under Season 1. Rush keeps the Eggs chip.
+  - The nest arrow is drawn on the canvas (`Renderer.drawNestArrow`), not in `hud.ts`, because
+    only the renderer knows the camera. It shows when the nest is off screen, or the trail has
+    5 or more ducklings.
+- **Events:** `run_end` gains a `banked` prop (clamped integer, 0–10 000) for the Phase 2 gate
+  ("≥ 70 % of runs bank at least once").
+- **Bundle:** Season 1 took the esbuild main chunk to 30.61 KB, over the 30 KB budget. The build
+  now uses **terser** (`build.minify`). `terser@5.51.2` was already installed through
+  `vite-plugin-pwa` and is now pinned as a devDependency. That brings the main chunk to
+  **29.27 KB**, and the online chunk drops from 60.34 to 58.78 KB. Terser's default compress has
+  no unsafe float math, and two checks confirm it:
+  - The sim and the bot were bundled with esbuild, then minified with terser
+    (`--compress --mangle`). Over 100 bot runs (50 seeds × Classic and Night, 98 of them banking),
+    the minified and plain bundles gave byte-identical results.
+  - A real keyboard-driven run on the terser production build (`vite preview`) queued its log
+    (`ruleset: 1`). The server's `replayRun` reproduced the card's score exactly: 1240 = 1240.
+
+**VERIFY results:**
+- **Changing a function signature needs `drop function`:** confirmed. Adding a parameter creates a
+  new overload, so the 4-arg `leaderboard` / 5-arg `rank_for` are dropped and recreated with the
+  same grants (`anon, authenticated`, plus `service_role` on `rank_for`).
+- **Golden-egg seed:** **`gold0`** (Classic). A golden egg is on the opening field at (1008, 94),
+  and the nest is at (280, 560). It is also recorded in the phase doc Appendix.
+
+**Migration `20261115000000_rulesets.sql`:** applied in order after the three earlier migrations on
+a throwaway `postgres:17-alpine`, with stubbed `auth` and roles. Checks:
+- the legacy 3- and 4-arg `leaderboard()` and the 4-arg `rank_for()` still return Season 0
+  while `current_ruleset = 0`;
+- `season => 1` returns only ruleset-1 rows;
+- after `update app_config set current_ruleset = 1`, the null season reads Season 1;
+- anon can read `app_config`, but not insert or update it;
+- the one-row check (`id` must be true) holds.
+
+**Not applied to production.** The owner runs `supabase db push --linked` before deploying.
+
+**Season 0 count:** 117 production `scores` rows at `2026-11-02T01:52Z` (Classic 109, Rush 3,
+Night 5; read-only, anon key). The count grows until the migration runs, so re-count right before
+`db push`. Afterwards, `count(*) where ruleset = 0` must equal it.
+
+**Acceptance (local, 2026-11-02):**
+- `npm test`: 30 files, **280 passed** (238 + 42). Coverage is 98.6 % lines over all files;
+  `trail.ts`, `scoring.ts` and `sight.ts` are 100 % lines, and `world.ts` is 100 % lines /
+  98.76 % branches. Thresholds are met.
+  - New tests: trail (8), tail sight (3), gator stun, tail spotting and loud splash (3),
+    Season 1 world (10: hatch, Rush no-hatch, bank, no-bank, snap and stun, duck still caught,
+    golden on `gold0`, golden ×5 with cap and loud splash, egg clearance), bank values and
+    carried difficulty, ruleset 409 ×3 / 400 / ruleset storage, queue ruleset (2), share and
+    OG copy, `run_end.banked`, the campaign banking goal, and 50-seed determinism.
+- `npm run lint && npm run build`: exit 0.
+- `npx vitest run src/sim/mapgen.test.ts`: connectivity holds over 200 seeds, with the nest
+  radius clear on all of them.
+- **Golden replay snapshot regenerated** for ruleset 1 (bot 4 on `golden`, which banks):
+  `{ banked: 4, eggs: 4, score: 780, ticks: 1832 }`. That is two banks of 2 (2 × 240), plus
+  30 s × 10.
+- `grep Math.(sin|cos|atan2|hypot|pow) src/sim` (non-test): none.
+- **Browser** (dev server on port 5179 with Supabase blocked; Playwright Chromium, because the
+  chrome-devtools MCP profile was held by another session):
+  - On seed `gold0`, a golden egg is on the field.
+  - With 5 ducklings carried, the HUD read `×5 → +750`.
+  - The gator's snout was placed on the tail: the trail went to 4, the run continued
+    (`playing`), the gator was stunned for 0.92 s, and the HUD read `×4 → +560`.
+  - Walking into the nest: banked 560, 4 ducklings, the trail cleared, and the score rose by
+    exactly 560 beyond the time points.
+  - The caught card shows "Banked 4".
+  - Rush has no trail, no golden egg and keeps the Eggs chip.
+  - No page errors. No horizontal overflow at 320, 768, 1024 or 1440.
+  - Fixed during the check: the Carrying chip and the board tabs wrapped at 320. They are now
+    `nowrap`, with clamped padding.
+- **Screenshots** (session scratchpad):
+  `/private/tmp/claude-501/-Users-allan-workspace-100ai-dino-game/8e1db280-f5c1-439c-808b-e2443fd296e2/scratchpad/shots/`
+  holds `carry5-1440.png`, `snap-1440.png`, `banked-1440.png`, `trail-{320,768,1024,1440}.png`,
+  `over-{320,1440}.png`, `title-{320,1440}.png` and `board-{320,1440}.png`.
+- **Main chunk gzipped:** 27.90 KB (Phase 1) → 28.06 KB (2a) → **29.27 KB** (terser; 30.61 KB with
+  esbuild). The budget is 30 KB.
+
+**Code review (independent agent):** no CRITICAL or HIGH findings. Fixed:
+- MEDIUM: the gator could snap a duckling through a log, because the snap was a distance test
+  only. A snap now also needs line of sight from the snout to the tail. Ducklings are clamped
+  inside the arena; they still ignore obstacles, by design. Tests were added for both.
+- MEDIUM: local bests and pace timelines were keyed by mode only. A Season 0 Classic or Night best
+  (eggs × 100) would hide Season 1 new-best feedback. Modes with ducklings now use `…:s1` keys.
+  Rush keeps its key, since its rules didn't change, and the old keys stay untouched as Season 0.
+- LOW: a snap and a catch could land on the same tick, which wasted the sacrifice. On a snap
+  tick the duck can't be caught. Tested.
+- LOW: the sight cone was drawn while the gator was stunned and blind. It is now hidden while
+  stunned.
+- LOW: the board reopened on the Season 0 tab. It now opens on the current season.
+- Kept as designed: a stunned gator can still catch a duck that walks into its jaws.
+  Carried ducklings count on top of the eggs collected for difficulty, as the spec says. The
+  `spawnEgg` fallback after 200 tries can break the nest clearance, which matches the existing
+  behaviour for the other spacing rules.
+
+**Security review (§5.4):** the endpoint change is one validated integer (`z.number().int()`),
+checked before the replay and before the rate-limit read. The migration:
+- enables RLS on `app_config`, with a select-only policy;
+- revokes insert, update and delete from anon and authenticated;
+- keeps both functions `security invoker` with `search_path = ''` and fully qualified names;
+- recreates the grants after the drop.
+
+`run_end.banked` is a clamped integer, analytics only. No CRITICAL, HIGH or MEDIUM findings.
+
+**Not yet done (owner or staging):**
+- `vercel dev` / staging: `ruleset: 0` → 409, and a fresh run → 201 with `banked`. Under
+  `vercel dev` the API writes to the production Supabase, which doesn't have the new columns
+  yet, and the check would create real anonymous users. Run it on staging after `db push`. The
+  same paths are covered by `api/_lib/submitScore.test.ts`.
+- The Phase 2 KPI gate (after a 7-day soak): median run 60–150 s, and ≥ 70 % of runs bank at
+  least once (`run_end.banked > 0`, or `scores.banked > 0` with `ruleset = 1`).
+
+**Release order (when the owner gives the go-ahead after 2026-11-09):**
+1. Re-count `scores`.
+2. `supabase db push --linked`. This is safe before the deploy: old code ignores the new columns,
+   and the old 4-/5-arg board calls still read Season 0.
+3. `git push origin main:staging`, then smoke-test the Preview.
+4. The owner pushes `main`.
+5. `update public.app_config set current_ruleset = 1;`
+

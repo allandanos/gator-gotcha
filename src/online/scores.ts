@@ -10,6 +10,8 @@ export interface SubmitResult {
   readonly mode: ModeId;
   readonly score: number;
   readonly eggs: number;
+  /** Ducklings banked during the run. */
+  readonly banked: number;
   readonly ticks: number;
   readonly rank: number;
   readonly dailyRank: number | null;

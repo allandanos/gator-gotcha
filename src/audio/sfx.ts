@@ -64,6 +64,32 @@ export function playEvents(engine: AudioEngine, events: readonly GameEvent[]): v
       case 'sprintStart':
         noiseBurst(engine, now, 0.18, 0.18, 900, 0.8);
         break;
+      case 'hatch': {
+        // A peep that climbs a semitone per duckling in tow.
+        const f = 1100 * Math.pow(2, Math.min(e.count, 12) / 12);
+        tone(engine, 'sine', f, f * 1.25, now + 0.1, 0.07, 0.16);
+        break;
+      }
+      case 'goldenPickup':
+        for (const [i, f] of [1320, 1660, 1980, 2640].entries()) {
+          tone(engine, 'triangle', f, f * 1.01, now + i * 0.05, 0.18, 0.14);
+        }
+        noiseBurst(engine, now, 0.4, 0.22, 500, 0.7);
+        break;
+      case 'snapped':
+        noiseBurst(engine, now, 0.12, 0.45, 260, 0.9);
+        tone(engine, 'square', 180, 70, now, 0.14, 0.2);
+        break;
+      case 'banked': {
+        // A major chord; each extra duckling stacks another voice up the arpeggio.
+        const voices = Math.min(3 + Math.floor(e.count / 3), 7);
+        const steps = [0, 4, 7, 12, 16, 19, 24];
+        for (let i = 0; i < voices; i++) {
+          const f = 392 * Math.pow(2, (steps[i] as number) / 12);
+          tone(engine, 'triangle', f, f, now + i * 0.04, 0.5 + e.count * 0.03, 0.12);
+        }
+        break;
+      }
       case 'caught':
         tone(engine, 'sawtooth', 220, 55, now, 0.35, 0.3);
         noiseBurst(engine, now, 0.25, 0.4, 300, 0.6);

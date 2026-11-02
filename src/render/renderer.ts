@@ -1,4 +1,4 @@
-import { ARENA } from '../config';
+import { ARENA, NEST } from '../config';
 import { hashSeed, Rng } from '../core/rng';
 import { angleDiff, clamp, dist, lerp, type Vec } from '../core/vec';
 import { gatorStats } from '../sim/difficulty';
@@ -7,7 +7,17 @@ import type { Gator, GameMap, World } from '../sim/types';
 import type { Effects } from './effects';
 import { PALETTE as P } from './palette';
 import { coneHinted, drawGatorEyes, drawNightFog } from './night';
-import { drawAlertIcon, drawDuck, drawEgg, drawGator, drawGrassDetail, drawLog, drawReeds } from './sprites';
+import {
+  drawAlertIcon,
+  drawDuck,
+  drawDuckling,
+  drawEgg,
+  drawGator,
+  drawGrassDetail,
+  drawLog,
+  drawNest,
+  drawReeds,
+} from './sprites';
 
 /** Decorative water ring drawn around the arena. */
 const BORDER = 140;
@@ -16,6 +26,9 @@ const GRASS_DETAIL_COUNT = 260;
 const JAW_RANGE = 140;
 /** Share of the half-view the death cam may shift away from the duck. */
 const REPLAY_DUCK_MARGIN = 0.6;
+/** The nest arrow shows once the trail is this long, even with the nest on screen. */
+const ARROW_TRAIL = 5;
+const ARROW_INSET = 34;
 
 function lerpVec(a: Vec, b: Vec, t: number): Vec {
   return { x: lerp(a.x, b.x, t), y: lerp(a.y, b.y, t) };
@@ -111,8 +124,10 @@ export class Renderer {
     ctx.scale(this.scale, this.scale);
     ctx.drawImage(bake, -BORDER, -BORDER, ARENA.width + BORDER * 2, ARENA.height + BORDER * 2);
 
+    if (cur.rules.ducklings) drawNest(ctx, cur.nest, NEST.radius, t, cur.ducklings.length > 0);
     this.drawCone(gator, cur);
-    for (const e of cur.eggs) drawEgg(ctx, e.pos.x, e.pos.y, t, e.id);
+    for (const e of cur.eggs) drawEgg(ctx, e.pos.x, e.pos.y, t, e.id, e.golden);
+    this.drawTrail(prev, cur, alpha, duck.pos, t);
 
     const caught = cur.status === 'caught';
     const near = dist(gator.pos, duck.pos) < JAW_RANGE && gator.mode === 'chase';
@@ -132,7 +147,60 @@ export class Renderer {
     fx.draw(ctx);
     if (replay?.spottedAt) drawSpottedMarker(ctx, replay.spottedAt);
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    if (!replay) fx.drawPulse(ctx, this.cssW, this.cssH);
+    if (!replay) {
+      fx.drawPulse(ctx, this.cssW, this.cssH);
+      this.drawNestArrow(cur, cam, t);
+    }
+  }
+
+  /** Ducklings, back to front; interpolated when the trail kept its length this step. */
+  private drawTrail(prev: World, cur: World, alpha: number, duck: Vec, t: number): void {
+    const same = prev.ducklings.length === cur.ducklings.length;
+    let leader = duck;
+    const pts = cur.ducklings.map((p, i) => (same ? lerpVec(prev.ducklings[i] as Vec, p, alpha) : p));
+    const facing = pts.map((p) => {
+      const f = Math.atan2(leader.y - p.y, leader.x - p.x);
+      leader = p;
+      return f;
+    });
+    for (let i = pts.length - 1; i >= 0; i--) drawDuckling(this.ctx, pts[i] as Vec, facing[i] as number, t, i);
+  }
+
+  /** Screen-edge arrow toward the nest: when it is off-screen, or a long trail wants banking. */
+  private drawNestArrow(w: World, cam: Vec, t: number): void {
+    const n = w.ducklings.length;
+    if (!w.rules.ducklings || n === 0 || w.status !== 'playing') return;
+    const sx = this.cssW / 2 + (w.nest.x - cam.x) * this.scale;
+    const sy = this.cssH / 2 + (w.nest.y - cam.y) * this.scale;
+    const onScreen = sx > 0 && sy > 0 && sx < this.cssW && sy < this.cssH;
+    if (onScreen && n < ARROW_TRAIL) return;
+    const cx = this.cssW / 2;
+    const cy = this.cssH / 2;
+    const a = Math.atan2(sy - cy, sx - cx);
+    // On screen: hover just short of the nest. Off screen: pin to the view's edge.
+    const reach = onScreen
+      ? Math.max(0, Math.hypot(sx - cx, sy - cy) - NEST.radius * this.scale - 24)
+      : Math.min(
+          (cx - ARROW_INSET) / Math.max(1e-6, Math.abs(Math.cos(a))),
+          (cy - ARROW_INSET) / Math.max(1e-6, Math.abs(Math.sin(a))),
+        );
+    const bob = Math.sin(t * 6) * 4;
+    const { ctx } = this;
+    ctx.save();
+    ctx.translate(cx + Math.cos(a) * (reach + bob), cy + Math.sin(a) * (reach + bob));
+    ctx.rotate(a);
+    ctx.beginPath();
+    ctx.moveTo(16, 0);
+    ctx.lineTo(-10, -13);
+    ctx.lineTo(-4, 0);
+    ctx.lineTo(-10, 13);
+    ctx.closePath();
+    ctx.fillStyle = P.duckling;
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = P.ink;
+    ctx.stroke();
+    ctx.restore();
   }
 
   /** Fog over the swamp; the gator's eyes, and its cone when near, stay readable on top. */
@@ -149,8 +217,9 @@ export class Renderer {
   }
 
   private drawCone(gator: Gator, w: World): void {
-    if (gator.grace > 0) return;
-    const stats = gatorStats(w.time, w.eggsCollected, w.rules);
+    // No cone during spawn grace, or while stunned and swallowing (blind).
+    if (gator.grace > 0 || gator.stun > 0) return;
+    const stats = gatorStats(w.time, w.eggsCollected, w.rules, w.ducklings.length);
     const poly = visibleConePolygon(
       { origin: gator.pos, heading: gator.heading, range: stats.coneRange, angle: stats.coneAngle },
       w.map.obstacles,

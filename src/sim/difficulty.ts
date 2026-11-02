@@ -16,8 +16,14 @@ export function difficultyLevel(time: number, eggs: number, startLevel = 0): num
   return clamp(startLevel + time / DIFFICULTY.timeToMax + eggs * DIFFICULTY.perEgg, 0, 1);
 }
 
-export function gatorStats(time: number, eggs: number, rules: RunRules = CLASSIC): GatorStats {
-  const level = difficultyLevel(time, eggs, rules.startLevel);
+/** `carried` ducklings count as eggs on top of those collected: a long trail raises the heat. */
+export function gatorStats(
+  time: number,
+  eggs: number,
+  rules: RunRules = CLASSIC,
+  carried = 0,
+): GatorStats {
+  const level = difficultyLevel(time, eggs + carried, rules.startLevel);
   return {
     level,
     speed: lerp(GATOR.baseSpeed, GATOR.maxSpeed, level),

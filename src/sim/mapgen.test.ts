@@ -1,4 +1,4 @@
-import { ARENA, GATOR, MAP } from '../config.js';
+import { ARENA, DUCK, GATOR, MAP, NEST } from '../config.js';
 import { dist } from '../core/vec.js';
 import { circleIntersectsRect, rectsOverlap } from './geometry.js';
 import { generateMap } from './mapgen.js';
@@ -10,10 +10,15 @@ describe('generateMap', () => {
     expect(generateMap('swamp1').obstacles).not.toEqual(generateMap('swamp2').obstacles);
   });
 
-  it('keeps every free area reachable across 200 seeds', () => {
+  it('keeps every free area reachable, and the nest clear, across 200 seeds', () => {
+    // The nest sits on the duck spawn (World.nest); the duck must fit anywhere inside it.
+    expect(NEST.radius + DUCK.radius).toBeLessThanOrEqual(MAP.spawnClearRadius);
     for (let i = 0; i < 200; i++) {
       const m = generateMap(`s${i}`);
       expect(floodCount(m.nav, cellOf(m.nav, m.gatorSpawn))).toBe(freeCells(m.nav).length);
+      for (const o of m.obstacles) {
+        expect(circleIntersectsRect(m.duckSpawn, NEST.radius + DUCK.radius, o)).toBe(false);
+      }
     }
   });
 

@@ -1,6 +1,7 @@
 import { NICKNAME_PATTERN } from '../core/nickname';
 import { PACE_MAX_CHECKPOINTS } from '../render/feel';
-import { parseMode, type ModeId } from '../sim/rules';
+import { RULESET } from '../config';
+import { parseMode, rulesForMode, type ModeId } from '../sim/rules';
 
 /** localStorage can be unavailable (private mode, blocked storage); every access is guarded. */
 const KEYS = {
@@ -33,8 +34,17 @@ function write(key: string, value: string): void {
   }
 }
 
-/** Classic keeps the original key so existing bests carry over. */
-const bestKey = (mode: ModeId): string => (mode === 'classic' ? KEYS.best : `${KEYS.best}:${mode}`);
+/**
+ * Modes whose scoring changed with the season get a fresh, season-suffixed key, so a Season 0
+ * best can't hide new-best feedback. Rush's rules didn't change, so its bests carry over.
+ */
+function seasonSuffix(mode: ModeId): string {
+  return rulesForMode(mode).ducklings ? `:s${RULESET}` : '';
+}
+
+/** Classic keeps the bare key (plus the season suffix) so its bests line up with older builds. */
+const bestKey = (mode: ModeId): string =>
+  (mode === 'classic' ? KEYS.best : `${KEYS.best}:${mode}`) + seasonSuffix(mode);
 
 export function loadBest(mode: ModeId): number {
   const n = Number.parseInt(read(bestKey(mode)) ?? '0', 10);
@@ -46,7 +56,7 @@ export function saveBest(mode: ModeId, score: number): void {
 }
 
 const timelineKey = (mode: ModeId): string =>
-  mode === 'classic' ? KEYS.bestTimeline : `${KEYS.bestTimeline}:${mode}`;
+  (mode === 'classic' ? KEYS.bestTimeline : `${KEYS.bestTimeline}:${mode}`) + seasonSuffix(mode);
 
 /** Score checkpoints (one per 10 s) of the best run in this mode; empty if unknown or corrupt. */
 export function loadBestTimeline(mode: ModeId): readonly number[] {

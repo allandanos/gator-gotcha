@@ -1,15 +1,15 @@
 import { escapeHtml, isUuid, logError } from './_lib/http.js';
-import { formatScore, formatTicks, modePrefix, modeQuery } from './_lib/format.js';
+import { formatScore, formatTicks, haulPhrase, modePrefix, modeQuery } from './_lib/format.js';
 import { supabaseRepository, type SharedScore } from './_lib/repository.js';
 
 // No meta refresh: link-preview crawlers follow it and would scrape the untagged game page instead.
 // People are forwarded by /share-redirect.js, which crawlers don't execute.
 function page(origin: string, s: SharedScore): string {
   const title = `${s.nickname} scored ${formatScore(s.score)} in Gator Gotcha`;
-  const eggs = `${s.eggs} ${s.eggs === 1 ? 'egg' : 'eggs'}`;
+  const haul = haulPhrase(s);
   const desc = s.dailyDate
-    ? `Daily Swamp ${s.dailyDate}: ${eggs} in ${formatTicks(s.ticks)}. Can you beat it?`
-    : `${modePrefix(s.mode)}${eggs}, survived ${formatTicks(s.ticks)}. Same swamp, your turn. Can you beat it?`;
+    ? `Daily Swamp ${s.dailyDate}: ${haul} in ${formatTicks(s.ticks)}. Can you beat it?`
+    : `${modePrefix(s.mode)}${haul}, survived ${formatTicks(s.ticks)}. Same swamp, your turn. Can you beat it?`;
   const target = `${origin}/?seed=${encodeURIComponent(s.seed)}&challenge=${encodeURIComponent(s.id)}${modeQuery(s.mode)}`;
   const image = `${origin}/api/og?id=${encodeURIComponent(s.id)}`;
   const url = `${origin}/s/${encodeURIComponent(s.id)}`;

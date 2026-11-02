@@ -30,7 +30,9 @@
       <header id="hud" class="hud" hidden>
         <dl class="hud-stats">
           <div id="hud-score-chip" class="chip chip--score"><dt>Score</dt><dd id="hud-score">0</dd></div>
-          <div class="chip"><dt>Eggs</dt><dd id="hud-eggs">0</dd></div>
+          <div id="hud-eggs-chip" class="chip"><dt>Eggs</dt><dd id="hud-eggs">0</dd></div>
+          <div id="hud-carry-chip" class="chip chip--carry" hidden><dt>Carrying</dt><dd id="hud-carry">0</dd></div>
+          <div id="hud-banked-chip" class="chip" hidden><dt>Banked</dt><dd id="hud-banked">0</dd></div>
           <div id="hud-goal-chip" class="chip chip--goal" hidden><dt id="hud-goal-label">Goal</dt><dd id="hud-goal">0</dd></div>
           <div id="hud-time-chip" class="chip"><dt id="hud-time-label">Time</dt><dd id="hud-time">0:00</dd></div>
           <div id="hud-pace" class="chip chip--pace" data-tone="even" hidden><dt>Vs best</dt><dd><span id="hud-pace-icon" aria-hidden="true">●</span> <span id="hud-pace-text">On pace</span></dd></div>
@@ -59,7 +61,7 @@
           <div class="card-col">
             <p class="eyebrow">A swamp chase</p>
             <h1 id="title-heading" class="logo"><span>Gator</span><span>Gotcha!</span></h1>
-            <p class="lede">Waddle around the swamp grabbing eggs. Each egg makes the gator faster and sharper-eyed. Duck behind logs and reeds to break its line of sight.</p>
+            <p class="lede">Grab eggs: each hatches a duckling that waddles behind you. Lead them home to the nest to bank them; the longer the line, the bigger the payout. Unbanked ducklings are worth nothing, and the gator may snap the last one. Golden eggs hatch five. Hide behind logs and reeds.</p>
           </div>
           <div class="card-col">
             <ul class="controls">
@@ -177,7 +179,7 @@
             <p id="over-newbest" class="badge" hidden>New best!</p>
             <p class="big-score" aria-live="polite"><span id="over-score">0</span><small>points</small></p>
             <dl class="over-stats">
-              <div><dt>Eggs</dt><dd id="over-eggs">0</dd></div>
+              <div><dt id="over-eggs-label">Eggs</dt><dd id="over-eggs">0</dd></div>
               <div><dt>Survived</dt><dd id="over-time">0:00</dd></div>
               <div><dt>Best</dt><dd id="over-best">0</dd></div>
             </dl>

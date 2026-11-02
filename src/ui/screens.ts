@@ -37,6 +37,8 @@ export interface GameOverStats {
   readonly sub: string;
   /** Mode name shown next to the seed; empty for classic. */
   readonly modeLabel: string;
+  /** "Banked" (ducklings) under Season 1 rules, "Eggs" in Egg Rush. */
+  readonly eggsLabel: string;
   readonly unseen: string;
   readonly closest: string;
   readonly eggsPerMin: string;
@@ -52,6 +54,7 @@ export function fillGameOver(s: GameOverStats): void {
   sub.textContent = s.sub;
   sub.hidden = !s.sub;
   $('#over-score').textContent = String(s.score);
+  $('#over-eggs-label').textContent = s.eggsLabel;
   $('#over-eggs').textContent = String(s.eggs);
   $('#over-time').textContent = s.time;
   $('#over-best').textContent = String(s.best);

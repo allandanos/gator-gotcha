@@ -78,6 +78,7 @@ export function starsFor(level: Level, run: RunResult): Stars {
 export function describeGoal(goal: Goal): string {
   const parts = [
     goal.eggs !== undefined ? `Grab ${goal.eggs} eggs` : '',
+    goal.ducklings !== undefined ? `Bank ${goal.ducklings} ducklings` : '',
     goal.surviveSec !== undefined ? `Survive ${goal.surviveSec} s` : '',
   ].filter(Boolean);
   return parts.join(' and ');

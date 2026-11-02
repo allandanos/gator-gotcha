@@ -285,7 +285,8 @@ function boot(): void {
     fillGameOver({
       ...rankedHeadline(world.status),
       score,
-      eggs: world.eggsCollected,
+      eggs: world.rules.ducklings ? world.bankedDucklings : world.eggsCollected,
+      eggsLabel: world.rules.ducklings ? 'Banked' : 'Eggs',
       time: formatTime(world.time),
       best: Math.max(score, previousBest),
       isNewBest,
@@ -300,7 +301,7 @@ function boot(): void {
     showScreen('over');
     install.onRunFinished();
     void online.onGameOver(seed, encodeLog(recorder.bytes()), mode);
-    track('run_end', { sec: world.time, eggs: world.eggsCollected, score, mode, ...feelProps() });
+    track('run_end', { sec: world.time, eggs: world.eggsCollected, banked: world.bankedDucklings, score, mode, ...feelProps() });
     void flushEvents();
   };
 

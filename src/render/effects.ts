@@ -21,6 +21,7 @@ interface Popup {
 const POPUP_LIFE = 0.9;
 const PICKUP_COLORS = ['#ffd84d', '#ffffff', '#ff9a2e'];
 const SPLASH_COLORS = ['#ffffff', '#4cc3e0', '#d6f6ff'];
+const GOLD_COLORS = ['#ffc92e', '#fffbe0', '#ffd84d'];
 
 /** Purely cosmetic, frame-rate-driven effects derived from sim events. */
 export class Effects {
@@ -62,10 +63,23 @@ export class Effects {
   }
 
   handle(events: readonly GameEvent[]): void {
+    // Under Season 1 an egg pays nothing until banked, so the pickup shows the hatch instead.
+    const hatching = events.some((e) => e.type === 'hatch');
     for (const e of events) {
       if (e.type === 'pickup') {
         this.burst(e.pos, 14, PICKUP_COLORS, 160);
-        this.popup(e.pos, '+100');
+        if (!hatching) this.popup(e.pos, '+100');
+      } else if (e.type === 'hatch') {
+        this.popup(e.pos, `×${e.count}`);
+      } else if (e.type === 'goldenPickup') {
+        this.burst(e.pos, 36, GOLD_COLORS, 300);
+        this.popup({ x: e.pos.x, y: e.pos.y - 30 }, 'Golden!', '#ffc92e');
+      } else if (e.type === 'snapped') {
+        this.burst(e.pos, 18, SPLASH_COLORS, 200);
+        this.popup(e.pos, 'Snap!', '#ff5a4e');
+      } else if (e.type === 'banked') {
+        this.burst(e.pos, 20 + e.count * 4, GOLD_COLORS, 220);
+        this.popup(e.pos, `+${e.value.toLocaleString('en-US')}`);
       } else if (e.type === 'caught') {
         this.burst(e.pos, 30, SPLASH_COLORS, 260);
         this.hitstop = HITSTOP_MS / 1000;

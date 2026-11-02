@@ -12,6 +12,7 @@ export interface NewScore {
   readonly dailyDate: string | null;
   readonly score: number;
   readonly eggs: number;
+  readonly banked: number;
   readonly ticks: number;
   readonly inputHash: string;
 }
@@ -20,9 +21,12 @@ export interface SharedScore {
   readonly id: string;
   readonly seed: string;
   readonly mode: ModeId;
+  readonly ruleset: number;
   readonly dailyDate: string | null;
   readonly score: number;
   readonly eggs: number;
+  /** Ducklings banked (Season 1+). */
+  readonly banked: number;
   readonly ticks: number;
   readonly nickname: string;
 }
@@ -106,6 +110,7 @@ export function supabaseRepository(client: SupabaseClient = adminClient()): Scor
           daily_date: row.dailyDate,
           score: row.score,
           eggs: row.eggs,
+          banked: row.banked,
           ticks: row.ticks,
           input_hash: row.inputHash,
         })
@@ -130,7 +135,7 @@ export function supabaseRepository(client: SupabaseClient = adminClient()): Scor
     async getShared(id) {
       const { data, error } = await client
         .from('scores')
-        .select('id, seed, mode, daily_date, score, eggs, ticks, profiles(nickname)')
+        .select('id, seed, mode, ruleset, daily_date, score, eggs, banked, ticks, profiles(nickname)')
         .eq('id', id)
         .maybeSingle();
       if (error) throw new Error(`getShared: ${error.message}`);
@@ -140,9 +145,11 @@ export function supabaseRepository(client: SupabaseClient = adminClient()): Scor
         id: data.id as string,
         seed: data.seed as string,
         mode: parseMode(data.mode) ?? 'classic',
+        ruleset: Number(data.ruleset ?? 0),
         dailyDate: (data.daily_date as string | null) ?? null,
         score: data.score as number,
         eggs: data.eggs as number,
+        banked: Number(data.banked ?? 0),
         ticks: data.ticks as number,
         nickname: profile?.nickname ?? 'A duck',
       };
