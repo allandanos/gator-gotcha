@@ -37,6 +37,10 @@ export interface GameOverStats {
   readonly sub: string;
   /** Mode name shown next to the seed; empty for classic. */
   readonly modeLabel: string;
+  readonly unseen: string;
+  readonly closest: string;
+  readonly eggsPerMin: string;
+  readonly spotted: number;
 }
 
 export function fillGameOver(s: GameOverStats): void {
@@ -51,6 +55,10 @@ export function fillGameOver(s: GameOverStats): void {
   $('#over-eggs').textContent = String(s.eggs);
   $('#over-time').textContent = s.time;
   $('#over-best').textContent = String(s.best);
+  $('#over-unseen').textContent = s.unseen;
+  $('#over-closest').textContent = s.closest;
+  $('#over-epm').textContent = s.eggsPerMin;
+  $('#over-spotted').textContent = String(s.spotted);
   $('#over-newbest').hidden = !s.isNewBest;
   $('#over-seed').textContent = s.seed;
   const mode = $('#over-mode');

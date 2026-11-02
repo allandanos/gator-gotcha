@@ -5,14 +5,17 @@ import './styles.css';
 import './modes.css';
 import { AudioEngine } from './audio/audio';
 import { Music } from './audio/music';
-import { playEvents } from './audio/sfx';
+import { playEvents, playNearMiss } from './audio/sfx';
 import { createLoop } from './core/loop';
 import { parseSeed, randomSeed } from './core/rng';
 import { Keyboard } from './input/keyboard';
 import { readInput } from './input/input';
 import { TouchControls } from './input/touch';
 import { Effects } from './render/effects';
+import { DEATHCAM_SKIP_GRACE_S } from './render/feel';
+import { NEAR_MISS_START, nearMisses } from './render/nearMiss';
 import { Renderer } from './render/renderer';
+import { deathcamDuration, deathcamFrame, pushFrame, spottedIndex } from './render/rewind';
 import { dequantizeInput, InputRecorder, quantizeInput } from './sim/input';
 import { dailyDateOf, dailySeed, encodeLog } from './sim/replay';
 import type { Level } from './sim/campaign';
@@ -35,20 +38,30 @@ import { isStandalone, setupInstall } from './ui/install';
 import { ModesUi, showPlayMode } from './ui/modes';
 import { OnlineUi } from './ui/onlineUi';
 import { END_DELAY, rankedHeadline } from './ui/runEnd';
+import { dueHints } from './ui/hints';
+import { paceSeconds, recordPace } from './ui/pace';
+import { addTick, closestDucks, EMPTY_RUN_STATS, eggsPerMinute } from './ui/runStats';
 import { fillGameOver, showScreen } from './ui/screens';
 import {
   loadBest,
+  loadBestTimeline,
+  loadHintsSeen,
   loadMode,
   loadMuted,
   saveBest,
+  saveBestTimeline,
+  saveHintsSeen,
   saveMode,
   saveMuted,
   takeUpdatedFrom,
 } from './ui/storage';
 import { setupUpdates } from './ui/updates';
 
-/** `ending`: the run is over (chomp, buzzer) and its animation plays before the card. */
-type Phase = 'title' | 'playing' | 'paused' | 'ending' | 'over';
+/**
+ * `ending`: the run is over (chomp, buzzer) and its animation plays before the card.
+ * `deathcam`: after a catch, the last seconds replay from the recorded worlds before the card.
+ */
+type Phase = 'title' | 'playing' | 'paused' | 'ending' | 'deathcam' | 'over';
 
 const MUSIC_INTENSITY = { wander: 0, search: 0.5, chase: 1 } as const;
 
@@ -112,6 +125,16 @@ function boot(): void {
   let phase: Phase = 'title';
   let endTimer = 0;
   let clock = 0;
+  // Render/UI-only run trackers, all fed from the worlds the sim already produced.
+  let frames: readonly World[] = [];
+  let nearMiss = NEAR_MISS_START;
+  let stats = EMPTY_RUN_STATS;
+  let timeline: readonly number[] = [];
+  let bestTimeline: readonly number[] = [];
+  let bestScore = 0;
+  let hintsSeen = loadHintsSeen();
+  let cam = { elapsed: 0, duration: 0, still: false, spotted: null as number | null };
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
   const boardOpen = () => !$('#screen-board').hidden;
   // Reload into a new build only where no run can be lost; the title screen is the safe spot.
@@ -153,6 +176,13 @@ function boot(): void {
     renderer.setMap(world.map);
     recorder.reset();
     fx.reset();
+    fx.reducedMotion = reducedMotion.matches;
+    frames = [];
+    nearMiss = NEAR_MISS_START;
+    stats = EMPTY_RUN_STATS;
+    timeline = [];
+    bestTimeline = level ? [] : loadBestTimeline(mode);
+    bestScore = level ? 0 : loadBest(mode);
     touch.reset();
     hud.reset(world);
     hud.show(true);
@@ -205,12 +235,36 @@ function boot(): void {
     phase = 'playing';
   };
 
+  const feelProps = () => ({ nearMisses: nearMiss.count, spottedCount: world.timesSpotted });
+
+  const startDeathcam = () => {
+    phase = 'deathcam';
+    const still = reducedMotion.matches;
+    cam = { elapsed: 0, still, spotted: spottedIndex(frames), duration: deathcamDuration(frames.length, still) };
+    hud.show(false);
+    hud.clearHints();
+    $('#deathcam').hidden = false;
+  };
+
+  const endDeathcam = (skipped: boolean) => {
+    $('#deathcam').hidden = true;
+    if (skipped) track('deathcam_skip', { at: Math.round(cam.elapsed * 10) / 10 });
+    finish();
+  };
+
   const finishLevel = (played: Level) => {
     hud.show(false);
     const { stars } = campaign.finish(played, world);
     const outcome = world.status === 'playing' ? 'caught' : world.status;
     track('level_end', { level: played.id, cleared: outcome === 'cleared', stars, outcome });
-    track('run_end', { sec: world.time, eggs: world.eggsCollected, score: 0, mode: 'campaign', level: played.id });
+    track('run_end', {
+      sec: world.time,
+      eggs: world.eggsCollected,
+      score: 0,
+      mode: 'campaign',
+      level: played.id,
+      ...feelProps(),
+    });
     void flushEvents();
   };
 
@@ -223,7 +277,11 @@ function boot(): void {
     const score = scoreOf(world);
     const previousBest = loadBest(mode);
     const isNewBest = score > previousBest;
-    if (isNewBest) saveBest(mode, score);
+    if (isNewBest) {
+      saveBest(mode, score);
+      saveBestTimeline(mode, timeline);
+    }
+    const closest = closestDucks(stats);
     fillGameOver({
       ...rankedHeadline(world.status),
       score,
@@ -233,19 +291,48 @@ function boot(): void {
       isNewBest,
       seed,
       modeLabel: mode === 'classic' ? '' : MODE_LABELS[mode],
+      unseen: formatTime(stats.unseenSec),
+      closest: closest === null ? '—' : `${closest.toFixed(1)} ducks`,
+      eggsPerMin: eggsPerMinute(stats).toFixed(1),
+      spotted: stats.spotted,
     });
     hud.show(false);
     showScreen('over');
     install.onRunFinished();
     void online.onGameOver(seed, encodeLog(recorder.bytes()), mode);
-    track('run_end', { sec: world.time, eggs: world.eggsCollected, score, mode });
+    track('run_end', { sec: world.time, eggs: world.eggsCollected, score, mode, ...feelProps() });
     void flushEvents();
   };
 
+  /** Fold one sim step into the death cam buffer, run stats, pace, near misses and hints. */
+  const observe = (dt: number) => {
+    frames = pushFrame(frames, world);
+    stats = addTick(stats, world, dt);
+    if (!level) timeline = recordPace(timeline, world.time, scoreOf(world));
+    nearMiss = nearMisses(nearMiss, world);
+    if (nearMiss.fired) {
+      fx.popup(world.duck.pos, 'Close shave!', '#ffffff');
+      playNearMiss(audio);
+    }
+    const hints = dueHints(world.events, hintsSeen);
+    if (hints.due.length) {
+      hintsSeen = hints.seen;
+      saveHintsSeen(hintsSeen);
+      hud.hint(hints.due);
+    }
+  };
+
   const update = (dt: number) => {
+    if (phase === 'deathcam') {
+      cam.elapsed += dt;
+      if (cam.elapsed >= cam.duration) endDeathcam(false);
+      return;
+    }
     if (phase === 'ending') {
       endTimer -= dt;
-      if (endTimer <= 0) finish();
+      if (endTimer > 0) return;
+      if (world.status === 'caught' && frames.length > 1) startDeathcam();
+      else finish();
       return;
     }
     if (phase !== 'playing') return;
@@ -254,6 +341,7 @@ function boot(): void {
     const input = quantizeInput(readInput(keyboard, touch));
     recorder.push(input);
     world = step(world, dequantizeInput(input), dt);
+    observe(dt);
     if (world.events.length) {
       fx.handle(world.events);
       playEvents(audio, world.events);
@@ -266,14 +354,29 @@ function boot(): void {
     }
   };
 
+  const pace = () =>
+    level || bestTimeline.length === 0 ? null : paceSeconds(bestTimeline, bestScore, world.time, scoreOf(world));
+
+  const renderReplay = () => {
+    const f = deathcamFrame(frames.length, cam.elapsed, cam.still, cam.spotted);
+    const a = frames[f.index] as World;
+    const spot = cam.spotted === null || f.index < cam.spotted ? null : frames[cam.spotted];
+    renderer.render(a, frames[f.index + 1] ?? a, f.alpha, fx, clock, { spottedAt: spot?.duck.pos ?? null });
+  };
+
   const render = (alpha: number, frameDt: number) => {
-    const animating = phase !== 'paused';
+    // A reduced-motion death cam is one still frame, so its clock and particles hold too.
+    const animating = phase !== 'paused' && !(phase === 'deathcam' && cam.still);
     if (animating) {
-      clock += frameDt;
+      if (!fx.frozen) clock += frameDt;
       fx.update(frameDt);
     }
+    if (phase === 'deathcam') {
+      renderReplay();
+      return;
+    }
     renderer.render(prev, world, phase === 'playing' ? alpha : 1, fx, clock);
-    if (phase === 'playing' || phase === 'ending') hud.update(world);
+    if (phase === 'playing' || phase === 'ending') hud.update(world, pace());
   };
 
   // Buttons.
@@ -332,6 +435,15 @@ function boot(): void {
   // Global keys.
   window.addEventListener('keydown', (e) => {
     if (e.repeat || isTypingTarget(e.target)) return;
+    if (phase === 'deathcam') {
+      // Modifiers and Tab stay with the browser (shortcuts, focus); everything else skips.
+      if (e.metaKey || e.ctrlKey || e.altKey || /^(Shift|Control|Alt|Meta|Tab)/.test(e.code)) return;
+      if (cam.elapsed < DEATHCAM_SKIP_GRACE_S) return;
+      // Swallowing the key keeps Space or Enter from also pressing the card's Retry.
+      e.preventDefault();
+      endDeathcam(true);
+      return;
+    }
     if (e.code === 'Escape' && boardOpen()) {
       closeBoard();
     } else if (e.code === 'Escape' && !$('#screen-modes').hidden) {
@@ -347,10 +459,21 @@ function boot(): void {
       else if (phase === 'paused') resume();
     } else if (e.code === 'KeyM') {
       toggleMute();
-    } else if (e.code === 'Enter' && !(e.target instanceof HTMLButtonElement) && !boardOpen()) {
+    } else if (
+      (e.code === 'Enter' || (e.code === 'Space' && phase === 'over')) &&
+      // A focused button handles Enter and Space itself; acting here too would start two runs.
+      !(e.target instanceof HTMLButtonElement) &&
+      !boardOpen()
+    ) {
+      e.preventDefault();
+      // The retry press must not also read as a held sprint in the new run.
+      if (e.code === 'Space') keyboard.release('Space');
       if (phase === 'over' && level) startLevel(level);
       else if (phase === 'title' || phase === 'over') startRun(seed);
     }
+  });
+  window.addEventListener('pointerdown', () => {
+    if (phase === 'deathcam' && cam.elapsed >= DEATHCAM_SKIP_GRACE_S) endDeathcam(true);
   });
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) pause();
@@ -365,6 +488,7 @@ function boot(): void {
         get: () => world,
         set: (w: World) => ((prev = w), (world = w)),
         phase: () => phase,
+        shake: () => fx.shake,
       },
     });
   }

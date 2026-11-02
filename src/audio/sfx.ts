@@ -72,3 +72,11 @@ export function playEvents(engine: AudioEngine, events: readonly GameEvent[]): v
     }
   }
 }
+
+/** "Close shave!": a quick rising whistle. */
+export function playNearMiss(engine: AudioEngine): void {
+  const ctx = engine.ctx;
+  if (!ctx) return;
+  tone(engine, 'sine', 600, 1500, ctx.currentTime, 0.16, 0.18);
+  tone(engine, 'triangle', 1500, 1900, ctx.currentTime + 0.12, 0.1, 0.12);
+}

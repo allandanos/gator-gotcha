@@ -1,4 +1,5 @@
 import { NICKNAME_PATTERN } from '../core/nickname';
+import { PACE_MAX_CHECKPOINTS } from '../render/feel';
 import { parseMode, type ModeId } from '../sim/rules';
 
 /** localStorage can be unavailable (private mode, blocked storage); every access is guarded. */
@@ -10,6 +11,8 @@ const KEYS = {
   runs: 'gator-gotcha:runs',
   installDismissed: 'gator-gotcha:install-dismissed',
   mode: 'gator-gotcha:mode',
+  hintsSeen: 'gator-gotcha:hints-seen',
+  bestTimeline: 'gator-gotcha:best-timeline',
 } as const;
 /** supabase-js persists its session under `sb-<project-ref>-auth-token`. */
 const SESSION_KEY = /^sb-[a-z0-9]+-auth-token$/;
@@ -40,6 +43,37 @@ export function loadBest(mode: ModeId): number {
 
 export function saveBest(mode: ModeId, score: number): void {
   write(bestKey(mode), String(Math.floor(score)));
+}
+
+const timelineKey = (mode: ModeId): string =>
+  mode === 'classic' ? KEYS.bestTimeline : `${KEYS.bestTimeline}:${mode}`;
+
+/** Score checkpoints (one per 10 s) of the best run in this mode; empty if unknown or corrupt. */
+export function loadBestTimeline(mode: ModeId): readonly number[] {
+  try {
+    const parsed: unknown = JSON.parse(read(timelineKey(mode)) ?? '[]');
+    const valid =
+      Array.isArray(parsed) &&
+      parsed.length <= PACE_MAX_CHECKPOINTS &&
+      parsed.every((n) => typeof n === 'number' && Number.isFinite(n) && n >= 0);
+    return valid ? (parsed as number[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveBestTimeline(mode: ModeId, timeline: readonly number[]): void {
+  write(timelineKey(mode), JSON.stringify(timeline.slice(0, PACE_MAX_CHECKPOINTS)));
+}
+
+/** Bitmask of first-run hints already shown (see `src/ui/hints.ts`). */
+export function loadHintsSeen(): number {
+  const n = Number(read(KEYS.hintsSeen));
+  return Number.isSafeInteger(n) && n > 0 ? n : 0;
+}
+
+export function saveHintsSeen(mask: number): void {
+  write(KEYS.hintsSeen, String(mask));
 }
 
 /** The ranked mode "Play" starts; classic until the player picks another. */

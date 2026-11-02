@@ -1,6 +1,10 @@
 import {
   bumpRunCount,
   loadBest,
+  loadBestTimeline,
+  loadHintsSeen,
+  saveBestTimeline,
+  saveHintsSeen,
   loadMode,
   saveBest,
   saveMode,
@@ -144,5 +148,38 @@ describe('per-mode best and last mode', () => {
     expect(loadBest('night')).toBe(0);
     expect(loadMode()).toBe('classic');
     expect(() => saveMode('rush')).not.toThrow();
+  });
+});
+
+describe('pace and hints', () => {
+  it('round-trips a best timeline per mode', () => {
+    vi.stubGlobal('window', { localStorage: memoryStorage() });
+    saveBestTimeline('classic', [100, 250]);
+    saveBestTimeline('rush', [0, 300]);
+    expect(loadBestTimeline('classic')).toEqual([100, 250]);
+    expect(loadBestTimeline('rush')).toEqual([0, 300]);
+    expect(loadBestTimeline('night')).toEqual([]);
+  });
+
+  it('rejects a corrupt or oversized timeline', () => {
+    const key = 'gator-gotcha:best-timeline';
+    for (const bad of ['{', '"x"', '[1,"2"]', '[-1]', JSON.stringify(Array(121).fill(1))]) {
+      vi.stubGlobal('window', { localStorage: memoryStorage({ [key]: bad }) });
+      expect(loadBestTimeline('classic')).toEqual([]);
+    }
+  });
+
+  it('round-trips the hints-seen bitmask and defaults to none', () => {
+    vi.stubGlobal('window', { localStorage: memoryStorage({ 'gator-gotcha:hints-seen': 'junk' }) });
+    expect(loadHintsSeen()).toBe(0);
+    saveHintsSeen(5);
+    expect(loadHintsSeen()).toBe(5);
+  });
+
+  it('survives unavailable storage', () => {
+    vi.stubGlobal('window', throwing);
+    expect(loadBestTimeline('classic')).toEqual([]);
+    expect(loadHintsSeen()).toBe(0);
+    expect(() => saveHintsSeen(1)).not.toThrow();
   });
 });

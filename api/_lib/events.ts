@@ -45,7 +45,10 @@ const CATALOGUE: Readonly<Record<string, Readonly<Record<string, PropNormalizer>
     score: num(0, MAX_SCORE, true),
     mode,
     level,
+    nearMisses: num(0, 10_000, true),
+    spottedCount: num(0, 10_000, true),
   },
+  deathcam_skip: { at: num(0, 10, false) },
   mode_select: { mode },
   level_end: {
     level,

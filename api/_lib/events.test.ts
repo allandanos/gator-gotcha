@@ -96,6 +96,21 @@ describe('normalizeBatch', () => {
     ]);
   });
 
+  it('carries death cam skips and run-end feel counts, clamped', () => {
+    const out = norm([
+      ev('deathcam_skip', { at: 1.25, extra: 'x' }),
+      ev('deathcam_skip', { at: 999 }),
+      ev('run_end', { sec: 30, eggs: 2, score: 500, nearMisses: 3.4, spottedCount: -2 }),
+      ev('run_end', { sec: 30, eggs: 2, score: 500, nearMisses: '3', spottedCount: 1e9 }),
+    ]).events;
+    expect(out.map((e) => e.props)).toEqual([
+      { at: 1.25 },
+      { at: 10 },
+      { sec: 30, eggs: 2, score: 500, nearMisses: 3, spottedCount: 0 },
+      { sec: 30, eggs: 2, score: 500, spottedCount: 10_000 },
+    ]);
+  });
+
   it('truncates long strings', () => {
     const [e] = norm([ev('title_view', { installed: false, referrer: 'x'.repeat(200) })]).events;
     expect(e?.props.referrer).toHaveLength(64);

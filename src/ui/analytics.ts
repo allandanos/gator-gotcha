@@ -16,7 +16,8 @@ export type EventName =
   | 'install_prompt_outcome'
   | 'update_applied'
   | 'mode_select'
-  | 'level_end';
+  | 'level_end'
+  | 'deathcam_skip';
 type TokenProvider = () => Promise<string | null>;
 
 const ENDPOINT = '/api/events';

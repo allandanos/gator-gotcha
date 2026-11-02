@@ -14,7 +14,8 @@ const BORDER = 140;
 const MAX_BAKE_SCALE = 2.5;
 const GRASS_DETAIL_COUNT = 260;
 const JAW_RANGE = 140;
-const SHAKE_PX = 14;
+/** Share of the half-view the death cam may shift away from the duck. */
+const REPLAY_DUCK_MARGIN = 0.6;
 
 function lerpVec(a: Vec, b: Vec, t: number): Vec {
   return { x: lerp(a.x, b.x, t), y: lerp(a.y, b.y, t) };
@@ -22,6 +23,12 @@ function lerpVec(a: Vec, b: Vec, t: number): Vec {
 
 function lerpGator(a: Gator, b: Gator, t: number): Gator {
   return { ...b, pos: lerpVec(a.pos, b.pos, t), heading: a.heading + angleDiff(a.heading, b.heading) * t };
+}
+
+/** Death cam overrides: frame both animals and show where the duck was spotted. */
+export interface ReplayView {
+  /** Duck position at the moment the gator spotted it, once playback has passed that moment. */
+  readonly spottedAt: Vec | null;
 }
 
 /** World-units → CSS px. Sized so the duck stays readable on phones and the view is roomy on desktop. */
@@ -85,21 +92,21 @@ export class Renderer {
     return c;
   }
 
-  render(prev: World, cur: World, alpha: number, fx: Effects, t: number): void {
+  render(prev: World, cur: World, alpha: number, fx: Effects, t: number, replay: ReplayView | null = null): void {
     this.syncSize();
     const { ctx } = this;
     const bake = this.ensureBake();
     const duck = { ...cur.duck, pos: lerpVec(prev.duck.pos, cur.duck.pos, alpha) };
     const gator = lerpGator(prev.gator, cur.gator, alpha);
-    const cam = this.camera(duck.pos);
-    const shake = fx.shake * SHAKE_PX;
+    const cam = this.camera(replay ? this.replayFocus(duck.pos, gator.pos) : duck.pos);
+    const shake = fx.shakeOffset();
 
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     ctx.fillStyle = P.waterDeep;
     ctx.fillRect(0, 0, this.cssW, this.cssH);
     ctx.translate(
-      this.cssW / 2 - cam.x * this.scale + (Math.random() - 0.5) * shake,
-      this.cssH / 2 - cam.y * this.scale + (Math.random() - 0.5) * shake,
+      this.cssW / 2 - cam.x * this.scale + shake.x,
+      this.cssH / 2 - cam.y * this.scale + shake.y,
     );
     ctx.scale(this.scale, this.scale);
     ctx.drawImage(bake, -BORDER, -BORDER, ARENA.width + BORDER * 2, ARENA.height + BORDER * 2);
@@ -118,20 +125,23 @@ export class Renderer {
       drawGator(ctx, gator, t, jaw);
       drawDuck(ctx, duck, t, caught);
     }
-    if (cur.rules.night) this.drawNight(gator, duck.pos, cur, t);
+    if (cur.rules.night) this.drawNight(gator, duck.pos, cur, t, replay !== null);
     if (gator.mode !== 'wander') {
       drawAlertIcon(ctx, gator.pos.x, gator.pos.y - 46, gator.mode === 'chase' ? '!' : '?', fx.alertPop);
     }
     fx.draw(ctx);
+    if (replay?.spottedAt) drawSpottedMarker(ctx, replay.spottedAt);
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    if (!replay) fx.drawPulse(ctx, this.cssW, this.cssH);
   }
 
   /** Fog over the swamp; the gator's eyes, and its cone when near, stay readable on top. */
-  private drawNight(gator: Gator, duck: Vec, w: World, t: number): void {
+  private drawNight(gator: Gator, duck: Vec, w: World, t: number, fullCone: boolean): void {
     const { ctx } = this;
     drawNightFog(ctx, duck, t);
-    if (coneHinted(gator, duck)) {
+    if (fullCone || coneHinted(gator, duck)) {
       ctx.save();
-      ctx.globalAlpha = 0.45;
+      ctx.globalAlpha = fullCone ? 1 : 0.45;
       this.drawCone(gator, w);
       ctx.restore();
     }
@@ -164,6 +174,16 @@ export class Renderer {
     ctx.setLineDash([]);
   }
 
+  /** Midway between duck and gator, but never so far that the duck leaves the view. */
+  private replayFocus(duck: Vec, gator: Vec): Vec {
+    const maxX = (this.cssW / 2 / this.scale) * REPLAY_DUCK_MARGIN;
+    const maxY = (this.cssH / 2 / this.scale) * REPLAY_DUCK_MARGIN;
+    return {
+      x: duck.x + clamp((gator.x - duck.x) / 2, -maxX, maxX),
+      y: duck.y + clamp((gator.y - duck.y) / 2, -maxY, maxY),
+    };
+  }
+
   private camera(focus: Vec): Vec {
     const halfW = this.cssW / 2 / this.scale;
     const halfH = this.cssH / 2 / this.scale;
@@ -171,6 +191,24 @@ export class Renderer {
       half * 2 >= size + BORDER * 2 ? size / 2 : clamp(f, half - BORDER, size + BORDER - half);
     return { x: axis(focus.x, halfW, ARENA.width), y: axis(focus.y, halfH, ARENA.height) };
   }
+}
+
+/** A pin and label where the duck stood when the gator spotted it. */
+function drawSpottedMarker(ctx: CanvasRenderingContext2D, at: Vec): void {
+  ctx.save();
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = P.ink;
+  ctx.fillStyle = '#ff5a4e';
+  ctx.beginPath();
+  ctx.arc(at.x, at.y, 26, 0, Math.PI * 2);
+  ctx.setLineDash([8, 6]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.font = '22px "Lilita One", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.strokeText('Spotted here', at.x, at.y - 36);
+  ctx.fillText('Spotted here', at.x, at.y - 36);
+  ctx.restore();
 }
 
 function paintBackground(ctx: CanvasRenderingContext2D, map: GameMap): void {

@@ -21,6 +21,11 @@ export class Keyboard {
     target.addEventListener('blur', () => this.held.clear());
   }
 
+  /** Treat a key as released until it is pressed again (a retry key must not also sprint). */
+  release(code: string): void {
+    this.held.delete(code);
+  }
+
   private any(keys: Set<string>): boolean {
     for (const k of keys) if (this.held.has(k)) return true;
     return false;

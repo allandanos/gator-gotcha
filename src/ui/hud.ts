@@ -1,7 +1,9 @@
 import { DUCK } from '../config';
 import { scoreOf } from '../sim/scoring';
 import type { GatorMode, World } from '../sim/types';
+import { HINT_MS } from '../render/feel';
 import { $, formatTime } from './dom';
+import { formatPace } from './pace';
 
 const STATUS: Record<GatorMode, string> = {
   wander: 'Hidden',
@@ -26,6 +28,12 @@ export class Hud {
   private readonly stamina = $('#hud-stamina');
   private readonly staminaFill = $('#hud-stamina-fill');
   private readonly status = $('#hud-status');
+  private readonly paceChip = $('#hud-pace');
+  private readonly paceIcon = $('#hud-pace-icon');
+  private readonly paceText = $('#hud-pace-text');
+  private readonly hintEl = $('#hint');
+  private hints: readonly string[] = [];
+  private hintTimer = 0;
   private last = {
     score: '',
     eggs: '',
@@ -35,6 +43,7 @@ export class Hud {
     exhausted: false,
     warn: false,
     goal: '',
+    pace: '',
   };
 
   show(visible: boolean): void {
@@ -50,7 +59,47 @@ export class Hud {
     this.scoreChip.hidden = goal !== null;
     this.goalChip.hidden = goal === null;
     this.goalLabel.textContent = goal?.eggs !== undefined ? 'Goal' : 'Survive';
-    this.last = { ...this.last, time: '', warn: false, goal: '' };
+    this.last = { ...this.last, time: '', warn: false, goal: '', pace: '' };
+    this.paceChip.hidden = true;
+    this.clearHints();
+  }
+
+  /** Drop any showing or queued tip (run over, or a new run starting). */
+  clearHints(): void {
+    window.clearTimeout(this.hintTimer);
+    this.hints = [];
+    this.hintTimer = 0;
+    this.hintEl.hidden = true;
+  }
+
+  /** Queue first-run tips; each shows for HINT_MS and never pauses the run. */
+  hint(texts: readonly string[]): void {
+    this.hints = [...this.hints, ...texts];
+    if (!this.hintTimer) this.nextHint();
+  }
+
+  private nextHint(): void {
+    const [text, ...rest] = this.hints;
+    this.hints = rest;
+    this.hintEl.hidden = text === undefined;
+    this.hintTimer = 0;
+    if (text === undefined) return;
+    this.hintEl.textContent = text;
+    this.hintTimer = window.setTimeout(() => this.nextHint(), HINT_MS);
+  }
+
+  /** Seconds ahead (+) or behind (−) the best run, or null to hide the readout. */
+  private updatePace(pace: number | null): void {
+    const label = pace === null ? null : formatPace(pace);
+    const key = label ? `${label.tone}:${label.text}` : '';
+    if (key === this.last.pace) return;
+    this.paceChip.hidden = !label;
+    if (label) {
+      this.paceChip.dataset.tone = label.tone;
+      this.paceIcon.textContent = label.icon;
+      this.paceText.textContent = label.text;
+    }
+    this.last = { ...this.last, pace: key };
   }
 
   private goalText(w: World): string {
@@ -60,7 +109,8 @@ export class Hud {
     return formatTime(Math.ceil(Math.max(0, (goal.surviveSec ?? 0) - w.time)));
   }
 
-  update(w: World): void {
+  update(w: World, pace: number | null = null): void {
+    this.updatePace(pace);
     const score = String(scoreOf(w));
     const eggs = String(w.eggsCollected);
     const left = w.rules.timeLimit === null ? null : Math.max(0, w.rules.timeLimit - w.time);
@@ -85,6 +135,7 @@ export class Hud {
       this.status.dataset.mode = w.gator.mode;
     }
     this.last = {
+      ...this.last,
       score,
       eggs,
       time,

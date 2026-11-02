@@ -4,6 +4,7 @@
 |---|---|---|---|
 | 2026-11-01 | 0 | done | events live |
 | 2026-11-02 | modes | live |  egg rush, night swamp, campaign (out of band, before phase 1) |
+| 2026-11-02 | 1 | done | death cam + juice |
 
 ## Evidence
 
@@ -137,3 +138,84 @@ A separate staging Supabase project would remove this; not in Phase 0 scope.
   `16b5889` alone: `{ title_view: 3, run_start: 1, run_end: 1 }` (real players already arriving).
 - `events_death_histogram` → buckets 30, 100, 270 s (1 run each).
 - KPI gate (7 consecutive days of events) is checked at the start of Phase 1.
+
+### Phase 1
+
+**Baseline (2026-11-02, `4013b03`):** `npm test` 24 files / 205 passed · lint + build exit 0 ·
+`git diff --stat HEAD -- src/sim` empty · `grep -c "| 0 | done" PROGRESS.md` → 1.
+
+**KPI baseline ("before" numbers; read-only, service role).** Events start
+`2026-10-31T16:21:32Z`, so only ~2.5 days of data, short of the 7-day gate. The owner decided to
+proceed. Retries are Classic only (`run_start.mode` = `classic` or absent), because modes add runs.
+Session `local-test` rows are excluded.
+- Classic retries per session: **mean 1.56, median 1** (32 sessions, 92 Classic run starts of 105 in total;
+  runs/session mean 2.88).
+- D1 (`events_retention`): 2026-10-31 cohort 1/1 (100 %, one player); 2026-11-01 cohort
+  **2/14 = 14.3 %**; 2026-11-02 cohort not yet measurable.
+- `events_daily_active`: 10-31 1 player / 13 sessions / 4 runs; 11-01 15 / 96 / 71; 11-02 (partial) 3 / 15 / 2.
+
+**Decisions taken**
+- Death cam: the 1.1 s live chomp plays first, with an 80 ms hitstop and a 250 ms / 8 px shake. A
+  `deathcam` phase follows. It replays the last 180 sim worlds (3 s) at 0.6×, about 5 s. The camera sits
+  midway between duck and gator, capped at 60 % of the half-view from the duck so the duck never leaves frame.
+  The sight cone is drawn full strength, also in Night. "Spotted here" pins the duck's position at the most
+  recent switch into `chase` in the buffer. Any key or pointerdown skips. The skipping keydown is swallowed,
+  so Space or Enter can't also press the newly focused Retry.
+- Reduced motion: no shake; the death cam holds one still frame (the spot, else the catch) for 3 s.
+  The red spotted pulse is an opacity fade and stays on.
+- The death cam runs on every catch (campaign too). Rush time-ups and campaign clears keep the old ending.
+- Worlds are buffered per sim step (60 Hz), not per rendered frame, so playback speed doesn't depend on refresh rate.
+- Pace is per mode (`best-timeline`, `best-timeline:rush`, `best-timeline:night`), saved only on a new best,
+  hidden until one exists and while the score is 0. "Past your best" shows beyond the timeline's end.
+- The death cam ignores modifier keys, Tab, and the first 0.3 s, so a player still steering at the catch doesn't skip it by accident.
+- Space retries only when focus isn't on a button. A focused button already reacts to Space, so
+  handling it here too would start two runs.
+- Closest call is shown in duck lengths (gap to the jaws ÷ 32 u), measured only on ticks the duck survived.
+- **Bundle budget raised to 30 KB gzipped (owner, this session):** the modes work had already taken the main
+  chunk to 25.32 KB against the old 26 KB budget.
+- DEV-only `window.__gator.shake()` was added for browser checks; it is stripped from production builds.
+
+**Security review (§5.4, catalogue change only, no new endpoint):** `deathcam_skip.at` is clamped
+to 0–10 s (float). `run_end.nearMisses` and `spottedCount` are clamped integers, 0–10 000. Unknown
+props are still dropped, and the batch size, body cap and rate limit are unchanged. No CRITICAL/HIGH/MEDIUM.
+LOW: the props are client-reported, like every other event prop; they are analytics only and never scored.
+
+**Acceptance (local, 2026-11-02)**
+- `npm test` → 29 files, **238 passed** (205 + 33). Coverage: all files 98.46 % lines; `rewind.ts`,
+  `nearMiss.ts`, `runStats.ts` and `hints.ts` 100 % lines; `pace.ts` 100 % lines / 95.45 % branches.
+  Thresholds met.
+- `npm run lint && npm run build` → exit 0.
+- `git diff --stat main -- src/sim src/config.ts` → empty; the golden replay test passes unchanged.
+- Browser, dev server (`vite --port 5179`, Supabase pointed at a dead host, `/api` 404, so nothing was posted):
+  - A catch forced through `window.__gator` goes `ending` → `deathcam` (HUD hidden, "Replay" badge shown) → `over`.
+  - A real Space press during the death cam → `over`, Retry focused, one `deathcam_skip {at: 0.7}` queued, no extra run.
+  - Space on the card → a new run. Each press started exactly one `run_start`.
+  - `run_end` carries `nearMisses: 0, spottedCount: 1`.
+  - Under `prefers-reduced-motion: reduce`: two canvas captures 0.8 s apart during the death cam were identical (still frame), and max `fx.shake` was 0 (1 without the emulation).
+  - HUD pace chip read "▼ −2s behind" against a seeded timeline.
+  - The first spot showed "Break line of sight behind logs and reeds" and cleared after 3 s; `hints-seen` became 1.
+- `vite preview` (production build, Supabase blocked): boots and plays; the DEV hook is absent; the only console
+  error is the expected `/api/events` 404 (no functions under preview). A catch was not forced there, because
+  the hook is DEV-only.
+- Screenshots (session scratchpad), each with no horizontal overflow:
+  - `/private/tmp/claude-501/-Users-allan-workspace-100ai-dino-game/b8c38821-fbb0-4cf6-b502-a664ce21c3cd/scratchpad/over-320.png` (stats wrap to 2×2)
+  - `/private/tmp/claude-501/-Users-allan-workspace-100ai-dino-game/b8c38821-fbb0-4cf6-b502-a664ce21c3cd/scratchpad/over-768.png`
+  - `/private/tmp/claude-501/-Users-allan-workspace-100ai-dino-game/b8c38821-fbb0-4cf6-b502-a664ce21c3cd/scratchpad/over-1024.png`
+  - `/private/tmp/claude-501/-Users-allan-workspace-100ai-dino-game/b8c38821-fbb0-4cf6-b502-a664ce21c3cd/scratchpad/over-1440.png`
+  - `/private/tmp/claude-501/-Users-allan-workspace-100ai-dino-game/b8c38821-fbb0-4cf6-b502-a664ce21c3cd/scratchpad/deathcam-1440.png` (cone + "Spotted here")
+- Main chunk gzipped: **before 25.32 KB → after 27.90 KB** (budget 30 KB; 19.2 KB on 2026-10-31 before modes).
+
+**Code review (independent agent):** no CRITICAL/HIGH. Fixed:
+- MEDIUM: a Space retry left Space held, so the new run started sprinting. It is now released
+  (`Keyboard.release`). Re-checked in the browser: stamina 100, not sprinting.
+- MEDIUM: "Past your best" showed in the best run's last, unrecorded seconds. Pace now hides there
+  and says "Past your best" only once the best score is beaten. Test added.
+- LOW: hints could linger over the death cam and card, or carry into the next run. They are now
+  cleared on run start and death cam start.
+- LOW: the death cam skipped on modifier keys and Tab, and on input in its first instant. It now
+  ignores modifiers and Tab, and has a 0.3 s grace (`DEATHCAM_SKIP_GRACE_S`). Re-checked: a key at
+  50 ms and Shift did not skip; a key after 0.3 s did.
+- Not changed (LOW, cosmetic): "Close shave!" appears at the duck's current position, 0.5 s after
+  the pass, where the player is looking.
+
+**KPI gate for this phase:** retries/session ≥ 3 and D1 ≥ 20 %, measured over 7 days after deploy (Classic only).

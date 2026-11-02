@@ -33,6 +33,7 @@
           <div class="chip"><dt>Eggs</dt><dd id="hud-eggs">0</dd></div>
           <div id="hud-goal-chip" class="chip chip--goal" hidden><dt id="hud-goal-label">Goal</dt><dd id="hud-goal">0</dd></div>
           <div id="hud-time-chip" class="chip"><dt id="hud-time-label">Time</dt><dd id="hud-time">0:00</dd></div>
+          <div id="hud-pace" class="chip chip--pace" data-tone="even" hidden><dt>Vs best</dt><dd><span id="hud-pace-icon" aria-hidden="true">●</span> <span id="hud-pace-text">On pace</span></dd></div>
         </dl>
         <div class="hud-right">
           <p id="hud-status" class="status" data-mode="wander" aria-live="polite">Hidden</p>
@@ -42,6 +43,9 @@
           <button id="pause-btn" class="icon-btn" type="button" aria-label="Pause">❚❚</button>
         </div>
       </header>
+
+      <p id="hint" class="hint" role="status" aria-live="polite" hidden></p>
+      <p id="deathcam" class="deathcam" role="status" hidden><b>Replay</b> <span>Press any key or tap to skip</span></p>
 
       <button id="mute-btn" class="icon-btn mute-btn" type="button" aria-pressed="false" aria-label="Mute sound">
         <span class="mute-on" aria-hidden="true">♪</span><span class="mute-off" aria-hidden="true">✕</span>
@@ -171,11 +175,17 @@
             <h2 id="over-heading" class="heading heading--chomp">CHOMP!</h2>
             <p id="over-sub" class="over-sub" hidden></p>
             <p id="over-newbest" class="badge" hidden>New best!</p>
-            <p class="big-score"><span id="over-score">0</span><small>points</small></p>
+            <p class="big-score" aria-live="polite"><span id="over-score">0</span><small>points</small></p>
             <dl class="over-stats">
               <div><dt>Eggs</dt><dd id="over-eggs">0</dd></div>
               <div><dt>Survived</dt><dd id="over-time">0:00</dd></div>
               <div><dt>Best</dt><dd id="over-best">0</dd></div>
+            </dl>
+            <dl class="run-stats" aria-label="Run stats">
+              <div><dt>Unseen</dt><dd id="over-unseen">0:00</dd></div>
+              <div><dt>Closest call</dt><dd id="over-closest">—</dd></div>
+              <div><dt>Eggs / min</dt><dd id="over-epm">0</dd></div>
+              <div><dt>Spotted</dt><dd id="over-spotted">0</dd></div>
             </dl>
           </div>
           <div class="card-col">
