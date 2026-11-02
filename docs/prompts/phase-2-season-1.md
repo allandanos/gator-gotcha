@@ -4,6 +4,21 @@
 and rulesets, §6.5 the queue, §6.6 determinism, and the "Submit rejections" row in §3). This
 prompt assumes it.
 
+> **Re-scope (2026-11-02, owner decision, after the first build).** This supersedes the season
+> parts below wherever they conflict.
+> - **No seasons and no Season 0 archive.** Boards stay per mode. Classic keeps its existing
+>   scores. `RULESET` stays and still gives a 409 for stale clients. There is no `app_config` and
+>   no `season` board parameter.
+> - **Classic** keeps its Phase 1 egg scoring and absorbs Night Swamp as a day/night cycle:
+>   40 s of day, then 20 s of night with the night factors (`CYCLE` in `src/config.ts`).
+> - **Night Swamp** is retired as a ranked mode. Its 5 production rows stay untouched and hidden.
+> - **Duckling Dash** (`ducklings`) is a new ranked mode with every mechanic below (trail, nest
+>   banking, tail snap, golden egg). It never cycles to night.
+> - **Egg Rush** is unchanged.
+> - **Campaign mixes level types:** egg goals with par times, fixed-night levels, and
+>   bank-N-duckling levels (4, 9 and 11). Night levels never use ducklings.
+> - The Phase 2 gate's "≥ 70 % of runs bank" now counts Duckling Dash runs only.
+
 ## Objective
 
 When this phase ends, the game has its first real greed mechanic, and the infrastructure lets

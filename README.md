@@ -20,7 +20,7 @@ npm run lint
 
 Without a link the game opens on today's Daily Swamp; **New swamp** on the game-over card rolls a
 random one. `?seed=abc123` in the URL replays a specific swamp layout (1–12 lowercase letters/digits);
-add `&mode=rush` or `&mode=night` for another mode.
+add `&mode=rush` or `&mode=ducklings` for another mode.
 
 ## Deploy
 
@@ -45,21 +45,15 @@ vercel deploy --prod
 - **Gator modes**: *wander* (yellow cone) → *chase* (red, `!`) when you're in its cone with clear
   line of sight → *search* (orange, `?`) at your last-seen spot for 3 s → back to wander.
 - Picking up an egg makes a splash the gator can hear within 450 u.
-- **Ducklings (Season 1).** Each egg hatches a duckling that trails behind you (up to 12). Lead
-  them into the **nest** (the woven ring where you started) to bank them. Banking `n` at once pays
-  `round(100 × n × (1 + 0.1 × n))`: 1 → 110, 4 → 560, 12 → 2,640. Ducklings you haven't banked
-  are worth nothing when you're caught.
-- **Greed has a cost.** Carried ducklings count as eggs for difficulty. From 4 ducklings on, the
-  gator can spot you by seeing the tail of the line. And it can snap the last duckling instead of
-  you, then stops for 1.2 s to swallow.
-- **Golden egg.** About 1 refill in 12 is golden: it hatches 5 ducklings, and its splash carries
-  twice as far. There's never more than one on the field.
-- Difficulty rises with time, eggs and the ducklings you carry: gator speed 150 → 270 (always
-  below your 300 dash), cone range 260 → 480, cone angle 70° → 110°.
-- Score = banked value + seconds survived × 10. Best score is stored in localStorage, per mode.
-- **Seasons.** Every score-affecting rule is versioned (`RULESET` in `src/config.ts`). Boards
-  are per season, and the server rejects runs from an older build with a 409 ("please reload").
-  Scores from before ducklings are archived as the Season 0 Hall of Fame.
+- **Day and night (Classic).** Every run starts in daylight. After 40 s night falls for 20 s,
+  then the cycle repeats. At night the swamp goes dark except for a lantern around the duck. The
+  gator sees less (cone × 0.65) but hears more (splash × 1.5). The HUD warns 5 s ahead.
+- Difficulty rises with time and eggs: gator speed 150 → 270 (always below your 300 dash), cone
+  range 260 → 480, cone angle 70° → 110°.
+- Score = eggs × 100 + seconds survived × 10. Best score is stored in localStorage, per mode.
+- **Rulesets.** Every score-affecting rule is versioned (`RULESET` in `src/config.ts`). Each
+  score records the ruleset it was replayed under. The server rejects runs from an older build
+  with a 409 ("please reload").
 
 ### Modes
 
@@ -68,17 +62,32 @@ mode is replayed by the server and has its own leaderboard. The Daily Swamp is a
 
 | Mode | Rules | Score |
 |---|---|---|
-| Classic | the endless chase above | banked value + seconds × 10 |
-| Egg Rush | 90 s clock, 8 eggs on the field, gator starts at 20 % difficulty; no ducklings | eggs × 100, +500 if you're still alive at 0:00 |
-| Night Swamp | lantern light only; gator sight × 0.65, hearing × 1.5 | as Classic |
+| Classic | the endless chase above, with the day/night cycle | eggs × 100 + seconds × 10 |
+| Egg Rush | 90 s clock, 8 eggs on the field, gator starts at 20 % difficulty; no night | eggs × 100, +500 if you're still alive at 0:00 |
+| Duckling Dash | ducklings, nest banking, tail snap, golden egg (below); always daylight | banked value + seconds × 10 |
 
-Modes are `RunRules` values (`src/sim/rules.ts`); `?mode=rush|night` in the URL picks one.
+Modes are `RunRules` values (`src/sim/rules.ts`); `?mode=rush|ducklings` in the URL picks one.
+Night Swamp was a separate mode until it was folded into Classic's cycle. Its old scores stay in
+the database, but no board shows them.
+
+#### Duckling Dash
+
+- Each egg hatches a duckling that trails behind you (up to 12). Lead them into the **nest** (the
+  woven ring where you started) to bank them. Banking `n` at once pays
+  `round(100 × n × (1 + 0.1 × n))`: 1 → 110, 4 → 560, 12 → 2,640. Ducklings you haven't banked
+  are worth nothing when you're caught.
+- **Greed has a cost.** Carried ducklings count as eggs for difficulty. From 4 ducklings on, the
+  gator can spot you by seeing the tail of the line. And it can snap the last duckling instead of
+  you, then stops for 1.2 s to swallow.
+- **Golden egg.** About 1 refill in 12 is golden: it hatches 5 ducklings, and its splash carries
+  twice as far. There's never more than one on the field.
 
 ### Campaign
 
 12 curated levels in three worlds (Reed Shallows, Moonlit Marsh at 6 ★, Bayou Rush at 15 ★).
-Each level is a fixed seed plus rules: a goal (bank N ducklings, or survive N seconds), sometimes a
-clock, night, or a higher starting difficulty. Clearing earns ★; the other two stars come from a
+Each level is a fixed seed plus rules. The goal is to grab N eggs, bank N ducklings (Duckling Dash
+rules), or survive N seconds. Some levels add a clock, permanent night, or a higher starting
+difficulty. Night levels are always egg or survival levels. Clearing earns ★; the other two stars come from a
 par time, an egg count, or how rarely you were spotted. Within a world, clearing a level opens
 the next. Progress is local (`gator-gotcha:campaign` in localStorage) and unranked: campaign runs
 are never submitted. Levels live in `CAMPAIGN` in `src/config.ts`; logic in `src/sim/campaign.ts`.

@@ -6,6 +6,7 @@
 | 2026-11-02 | modes | live |  egg rush, night swamp, campaign (out of band, before phase 1) |
 | 2026-11-02 | 1 | done | death cam + juice |
 | 2026-11-02 | 2 | done | season 1 built locally; ships after the phase 1 KPI gate (on or after 2026-11-09) |
+| 2026-11-02 | 2 | re-scoped | classic day/night cycle (night swamp folded in), duckling dash mode, mixed campaign; no seasons. still local |
 
 ## Evidence
 
@@ -422,3 +423,92 @@ checked before the replay and before the rate-limit read. The migration:
 4. The owner pushes `main`.
 5. `update public.app_config set current_ruleset = 1;`
 
+
+### Phase 2 re-scope (2026-11-02)
+
+**Owner decisions** (they supersede the season design above; also noted at the top of
+`docs/prompts/phase-2-season-1.md`):
+- **No seasons and no Season 0 tab.** Classic keeps its existing scores as its board. The
+  `ruleset` column and the stale-client 409 stay. `app_config` and the `season` board parameter
+  are gone.
+- **Classic** goes back to Phase 1 egg scoring and gets a **day/night cycle**: 40 s of day, then
+  20 s of night with the `MODES.night` factors (cone × 0.65, hearing × 1.5).
+  - The fog fades in over 2 s at dusk and out over 2 s at dawn (render only).
+  - The HUD shows "Night in 5…", then "Dawn 0:20" through the night.
+  - On the first night, a one-time tip shows: "Night falls: the gator sees less but hears more".
+  - Nightfall and daybreak each play a sound.
+- **Night Swamp** is retired as a ranked mode. Its 5 production rows are kept untouched and
+  shown on no board.
+- **Duckling Dash** (`ducklings`) is a new ranked mode with the trail, nest, snap and golden
+  egg. It is always in daylight.
+- **Egg Rush** is unchanged.
+- **Campaign mixes level types:**
+  - Levels 4, 9 and 11 are bank-N-duckling levels, with the Phase 2 par times and clocks.
+  - Every other level is back to its Phase 1 values.
+  - The night levels (5–8 and 12) stay egg or survive levels.
+
+**Decisions taken:**
+- **Cycle math.** It runs on the accumulated `World.time`, the same value the server replays.
+  `cycle.ts` owns the phase math (`isNightAt`, `senseFactors`, `fogAlpha`, `secondsToNight`,
+  `secondsToDawn`). Night levels use `rules.night`; `rules.dayNight` drives the cycle.
+- **Stale clients.** `submitScore` now checks the ruleset before the mode. An old cached client
+  sending `mode: 'night'` gets the 409 "please reload". On the current ruleset, `night` is a
+  400. Queued `night` runs and a saved `night` mode fall back to Classic or are dropped
+  client-side.
+- **Local bests are back on the Phase 1 keys.** Classic bests stay valid; Duckling Dash uses
+  `best:ducklings`.
+- **The migration was rewritten (still unapplied).** It adds `ruleset` and `banked`, and swaps
+  `scores_mode_check` to `classic|rush|night|ducklings`. `night` stays allowed for the old rows.
+  `leaderboard` and `rank_for` are untouched.
+
+**Accepted gaps (from the code review, no CRITICAL or HIGH findings):**
+- **The Classic board mixes ruleset 0 (no cycle) and ruleset 1 (cycle) scores.** This is
+  deliberate, by owner decision. `ruleset` is recorded, so the board can be split later if
+  needed.
+- **Old Night Swamp share links.** `getShared` maps a stored `night` row to Classic. Such a link
+  shows no mode label and opens a Classic challenge. Only the 5 hidden rows are affected.
+
+**Fixed from the review:** cycle phase math now lives only in `cycle.ts` (new `secondsToDawn`); a
+duplicate import; leftover season naming.
+
+**Acceptance (local):**
+- `npm test`: 32 files, **297 passed**. Coverage: 98.7 % lines; `cycle.ts`, `scoring.ts`,
+  `campaign.ts` and `difficulty.ts` 100 %.
+- `npm run lint && npm run build` exit 0. The main chunk is **29.78 KB** gzipped (budget 30 KB).
+- **Golden snapshots** (ruleset 1):
+  - Classic, with the evasive bot on `golden` through a full night:
+    `{ eggs: 0, score: 700, ticks: 4257 }`.
+  - Duckling Dash, with bot 4 on `golden`: `{ banked: 4, eggs: 4, score: 780, ticks: 1832 }`.
+  - The 50-seed determinism test now runs both modes.
+- **Migration on a throwaway `postgres:17-alpine`** (after the three earlier migrations, with
+  pre-existing `classic` and `night` rows):
+  - existing rows read `ruleset 0` and `banked 0`;
+  - the Classic board lists the old Classic row;
+  - the `night` row survives but is on no board;
+  - a `ducklings` insert appears on its own board, and `rank_for` works;
+  - a `turbo` mode and a daily `ducklings` row are both rejected.
+- **Browser** (dev server, Supabase and `/api` blocked, Playwright Chromium):
+  - Classic on `gold0`: no trail, and the Eggs chip shows. At 36.8 s the HUD read "Night in 4".
+    At 40.8 s it read "Dawn 0:20", with the fog and the tip. An egg counted with no duckling.
+    At 62.8 s the chip had cleared.
+  - Duckling Dash: golden egg present, Carrying chip, no night chip at 41 s. Banking 4 paid 560.
+  - Modes screen: Classic / Egg Rush / Duckling Dash / Campaign. The board switch is
+    Classic / Egg Rush / Ducklings, with no Season 0 tab.
+  - Campaign tiles: L4 "Bank 10 ducklings", L5 night "Grab 4 eggs".
+  - No overflow at 320, 768, 1024 or 1440. No page errors.
+- Screenshots: `rescope-*.png` in the session scratchpad `shots/`.
+
+**Release order (supersedes the one above, after the go-ahead on or after 2026-11-09):**
+1. `supabase db push --linked`. It's safe before the deploy: old code ignores the new columns.
+2. `git push origin main:staging`, then smoke-test the Preview:
+   - `ruleset: 0` → 409;
+   - `mode: 'night'` from an old client → 409;
+   - a fresh Classic run → 201;
+   - a Duckling Dash run → 201 with `banked`.
+3. The owner pushes `main`.
+
+**Still open:**
+- A human playtest of the campaign duckling levels and of the cycle pacing.
+- The Phase 2 KPI gate after a 7-day soak:
+  - median run 60–150 s;
+  - ≥ 70 % of **Duckling Dash** runs bank at least once.
