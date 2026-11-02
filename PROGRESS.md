@@ -512,3 +512,15 @@ duplicate import; leftover season naming.
 - The Phase 2 KPI gate after a 7-day soak:
   - median run 60–150 s;
   - ≥ 70 % of **Duckling Dash** runs bank at least once.
+
+**Cycle retune (2026-11-02, owner):** the cycle went from 40/20/2 to **55 s day + 5 s dusk + 30 s
+night = 90 s**. Dusk is now its own phase.
+- **Dusk:** the fog fades in and the HUD shows "Night in 5…", while the gator keeps its daytime
+  senses.
+- **Night:** night senses from 60 s to 90 s.
+- **Dawn:** the fog lifts over the first 5 s of the next day (render only).
+
+Ruleset 1 had never reached production, and its only scores (the staging smoke runs) were deleted,
+so there was no `RULESET` bump. The Classic golden snapshot moved to the evasive bot on `dusk4`
+(124 s, through nightfall at 60 s and daybreak at 90 s): `{ eggs: 0, score: 1240, ticks: 7456 }`.
+The same run without the cycle is caught at 5045 ticks, and a test asserts the two differ.

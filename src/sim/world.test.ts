@@ -145,6 +145,7 @@ describe('world under run rules', () => {
 });
 
 describe('classic day/night cycle', () => {
+  const NIGHTFALL = CYCLE.daySec + CYCLE.duskSec;
   const IDLE: InputState = { move: { x: 0, y: 0 }, sprint: false };
   /** Step from just before `at` seconds to just after it, collecting events. */
   const across = (rules: RunRules, at: number) => {
@@ -154,15 +155,16 @@ describe('classic day/night cycle', () => {
     return w.events.map((e) => e.type);
   };
 
-  it('emits nightfall when day ends and daybreak when night ends', () => {
-    expect(across(CLASSIC, CYCLE.daySec)).toContain('nightfall');
-    expect(across(CLASSIC, CYCLE.daySec + CYCLE.nightSec)).toContain('daybreak');
+  it('emits nightfall when dusk ends and daybreak when night ends', () => {
+    expect(across(CLASSIC, CYCLE.daySec)).not.toContain('nightfall');
+    expect(across(CLASSIC, NIGHTFALL)).toContain('nightfall');
+    expect(across(CLASSIC, NIGHTFALL + CYCLE.nightSec)).toContain('daybreak');
     expect(across(CLASSIC, CYCLE.daySec / 2)).not.toContain('nightfall');
   });
 
   it('never cycles in Duckling Dash, Egg Rush or fixed-night levels', () => {
     for (const rules of [rulesForMode('ducklings'), rulesForMode('rush'), { ...CLASSIC, ...NIGHT_RULES, dayNight: false }]) {
-      expect(across(rules, CYCLE.daySec)).not.toContain('nightfall');
+      expect(across(rules, NIGHTFALL)).not.toContain('nightfall');
     }
   });
 

@@ -70,16 +70,19 @@ describe('replayRun', () => {
   });
 
   it('matches a Classic golden snapshot through a full night (regenerate per RULESET)', () => {
-    // Ruleset 1. The evasive bot lasts past nightfall (40 s) and daybreak (60 s) on this swamp.
-    const { log } = recordEvasiveRun('golden', rulesForMode('classic'));
-    expect(log.length).toBeGreaterThan((CYCLE.daySec + CYCLE.nightSec) / SIM_DT);
-    expect(replayRun('golden', log)).toMatchInlineSnapshot(`
+    // Ruleset 1. The evasive bot lasts past nightfall (60 s) and daybreak (90 s) on this swamp.
+    const { log } = recordEvasiveRun('dusk4', rulesForMode('classic'));
+    expect(log.length).toBeGreaterThan((CYCLE.daySec + CYCLE.duskSec + CYCLE.nightSec) / SIM_DT);
+    // The cycle changes this run: without it the gator catches the duck much sooner.
+    const noCycle = recordEvasiveRun('dusk4', { ...rulesForMode('classic'), dayNight: false });
+    expect(noCycle.log.length).not.toBe(log.length);
+    expect(replayRun('dusk4', log)).toMatchInlineSnapshot(`
       {
         "banked": 0,
         "eggs": 0,
         "ok": true,
-        "score": 700,
-        "ticks": 4257,
+        "score": 1240,
+        "ticks": 7456,
       }
     `);
   });

@@ -102,8 +102,11 @@ export const SIM_DT = 1 / 60;
  */
 export const RULESET = 1;
 
-/** Classic's day/night cycle: day first, then night with the `MODES.night` factors. */
-export const CYCLE = { daySec: 40, nightSec: 20, duskSec: 2 } as const;
+/**
+ * Classic's day/night cycle (90 s): day, then a dusk fade (senses still daytime), then night with
+ * the `MODES.night` factors. The fog lifts over the first `duskSec` of the next day (render only).
+ */
+export const CYCLE = { daySec: 55, nightSec: 30, duskSec: 5 } as const;
 
 /** Ranked mode tuning. Classic must stay at the neutral values: its scores are replayed as-is. */
 export const MODES = {

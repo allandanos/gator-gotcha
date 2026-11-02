@@ -18,7 +18,7 @@ const COUNTDOWN_WARN = 10;
 const NIGHT_WARN = 5;
 
 /**
- * Classic's day/night cue: "Night in 5" at dusk, then "Dawn 0:12" until the night ends.
+ * Classic's day/night cue: "Night in 5" at dusk, then "Dawn 0:22" until the night ends.
  * Null hides the chip (daytime, or rules without a cycle).
  */
 export function nightCue(rules: World['rules'], time: number): { label: string; value: string } | null {

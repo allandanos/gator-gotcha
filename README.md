@@ -45,9 +45,10 @@ vercel deploy --prod
 - **Gator modes**: *wander* (yellow cone) → *chase* (red, `!`) when you're in its cone with clear
   line of sight → *search* (orange, `?`) at your last-seen spot for 3 s → back to wander.
 - Picking up an egg makes a splash the gator can hear within 450 u.
-- **Day and night (Classic).** Every run starts in daylight. After 40 s night falls for 20 s,
-  then the cycle repeats. At night the swamp goes dark except for a lantern around the duck. The
-  gator sees less (cone × 0.65) but hears more (splash × 1.5). The HUD warns 5 s ahead.
+- **Day and night (Classic).** Every run starts in daylight. The cycle is 90 s long: 55 s of day,
+  5 s of dusk while the fog rolls in, then 30 s of night, and then it repeats. At night the swamp
+  goes dark except for a lantern around the duck. The gator sees less (cone × 0.65) but hears more
+  (splash × 1.5). The HUD counts down through dusk ("Night in 5…") and shows the time to dawn.
 - Difficulty rises with time and eggs: gator speed 150 → 270 (always below your 300 dash), cone
   range 260 → 480, cone angle 70° → 110°.
 - Score = eggs × 100 + seconds survived × 10. Best score is stored in localStorage, per mode.

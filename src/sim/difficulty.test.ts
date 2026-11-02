@@ -31,13 +31,16 @@ describe('difficulty', () => {
     expect(gatorStats(1e6, 1e6, rulesForMode('rush')).level).toBe(1);
   });
 
-  it('switches Classic to night senses for the night phase of each cycle', () => {
+  it('switches Classic to night senses after dusk, for the night phase of each cycle', () => {
+    const NIGHTFALL = CYCLE.daySec + CYCLE.duskSec;
     const day = gatorStats(CYCLE.daySec - 1, 0);
-    const night = gatorStats(CYCLE.daySec + 1, 0);
+    // Dusk is still day for the gator; only the screen darkens.
+    expect(gatorStats(CYCLE.daySec + 1, 0).hearRadius).toBe(GATOR.splashHearRadius);
+    const night = gatorStats(NIGHTFALL + 1, 0);
     expect(night.coneRange / night.speed).toBeCloseTo((day.coneRange / day.speed) * MODES.night.coneRangeFactor, 1);
     expect(night.hearRadius).toBeCloseTo(GATOR.splashHearRadius * MODES.night.hearFactor);
-    expect(gatorStats(CYCLE.daySec + CYCLE.nightSec + 1, 0).hearRadius).toBe(GATOR.splashHearRadius);
-    expect(gatorStats(CYCLE.daySec + 1, 0, rulesForMode('ducklings')).hearRadius).toBe(GATOR.splashHearRadius);
+    expect(gatorStats(NIGHTFALL + CYCLE.nightSec + 1, 0).hearRadius).toBe(GATOR.splashHearRadius);
+    expect(gatorStats(NIGHTFALL + 1, 0, rulesForMode('ducklings')).hearRadius).toBe(GATOR.splashHearRadius);
   });
 
   it('counts carried ducklings as eggs, so a long trail raises the pressure', () => {
