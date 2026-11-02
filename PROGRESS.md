@@ -219,3 +219,15 @@ LOW: the props are client-reported, like every other event prop; they are analyt
   the pass, where the player is looking.
 
 **KPI gate for this phase:** retries/session ≥ 3 and D1 ≥ 20 %, measured over 7 days after deploy (Classic only).
+
+**Staging (Vercel Preview `gator-gotcha-c1pmfao4x-allandanos.vercel.app`, commit `a3dcb44`)**
+- `vercel curl /` serves the new markup (`#deathcam`, `#hud-pace`, `#over-unseen`).
+- `POST /api/events` with `deathcam_skip {at: 1.2}` and `run_end {…, nearMisses: 2, spottedCount: 1}` → `202 {"accepted":2}`.
+  A service-role read returned both props as sent. Test session `95f3e970-c690-4bf1-a780-575d98ef17da`,
+  `app_version = 'phase1-smoke'`, kept in the shared project per "delete nothing"; exclude it from KPI queries.
+
+**Production (`main` fast-forwarded to `a3dcb44` by the owner; deployment `gator-gotcha-1igic4l4k`)**
+- https://www.gatorgotcha.com serves the new markup. `POST /api/events -d '{}'` → `400`.
+- Chrome, fresh isolated context: the title shows today's seed `d20261102`; the card has 4 run-stat fields;
+  `window.__gator` is absent; there are no console errors or warnings. No run was played on production.
+- KPI gate window starts 2026-11-02: retries/session ≥ 3 and D1 ≥ 20 %, Classic only, after 7 days.
