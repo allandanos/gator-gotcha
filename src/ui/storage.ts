@@ -1,5 +1,4 @@
 import { NICKNAME_PATTERN } from '../core/nickname';
-import { parseSeed } from '../core/rng';
 import { parseMode, type ModeId } from '../sim/rules';
 
 /** localStorage can be unavailable (private mode, blocked storage); every access is guarded. */
@@ -7,7 +6,6 @@ const KEYS = {
   best: 'gator-gotcha:best',
   muted: 'gator-gotcha:muted',
   nickname: 'gator-gotcha:nickname',
-  seed: 'gator-gotcha:seed',
   updatedFrom: 'gator-gotcha:updated-from',
   runs: 'gator-gotcha:runs',
   installDismissed: 'gator-gotcha:install-dismissed',
@@ -69,16 +67,6 @@ export function loadNickname(): string | null {
 
 export function saveNickname(name: string): void {
   if (NICKNAME_PATTERN.test(name)) write(KEYS.nickname, name);
-}
-
-/** The swamp last played, so an installed app (launched without ?seed=) reopens on it. */
-export function loadSeed(): string | null {
-  return parseSeed(read(KEYS.seed));
-}
-
-export function saveSeed(seed: string): void {
-  const valid = parseSeed(seed);
-  if (valid) write(KEYS.seed, valid);
 }
 
 function readPositiveInt(key: string): number | null {

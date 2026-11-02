@@ -40,11 +40,9 @@ import {
   loadBest,
   loadMode,
   loadMuted,
-  loadSeed,
   saveBest,
   saveMode,
   saveMuted,
-  saveSeed,
   takeUpdatedFrom,
 } from './ui/storage';
 import { setupUpdates } from './ui/updates';
@@ -103,9 +101,7 @@ function boot(): void {
   const recorder = new InputRecorder();
 
   const params = new URL(window.location.href).searchParams;
-  let seed =
-    pickBootSeed(parseSeed(params.get('seed')), loadSeed(), dailySeed(new Date())) ?? randomSeed();
-  saveSeed(seed);
+  let seed = pickBootSeed(parseSeed(params.get('seed')), dailySeed(new Date()));
   let mode = bootMode(params);
   // A shared-score link pins its seed and mode; the banner applies only while playing exactly that.
   const challenge = params.get('challenge') ? { seed, mode } : null;
@@ -176,7 +172,6 @@ function boot(): void {
     level = null;
     seed = nextSeed;
     mode = nextMode;
-    saveSeed(seed);
     const isChallenge = challenge?.seed === seed && challenge.mode === mode;
     if (!isChallenge) $('#challenge-banner').hidden = true;
     window.history.replaceState(null, '', seedUrl(seed, mode, isChallenge));

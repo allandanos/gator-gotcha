@@ -18,7 +18,8 @@ npm run build      # typecheck + production bundle in dist/
 npm run lint
 ```
 
-`?seed=abc123` in the URL replays a specific swamp layout (1–12 lowercase letters/digits);
+Without a link the game opens on today's Daily Swamp; **New swamp** on the game-over card rolls a
+random one. `?seed=abc123` in the URL replays a specific swamp layout (1–12 lowercase letters/digits);
 add `&mode=rush` or `&mode=night` for another mode.
 
 ## Deploy
@@ -109,8 +110,7 @@ background, and the app reloads into it as soon as that can't interrupt a run: i
 title screen, or when the app is backgrounded from the title or game-over screen. Players can also
 tap "Update now". `registerType: 'prompt'` keeps a downloaded build waiting until then.
 
-**What's remembered on this device**: the last swamp (`gator-gotcha:seed`; an old Daily Swamp
-gives way to a fresh swamp), the nickname (`gator-gotcha:nickname`, refreshed from the server for
+**What's remembered on this device**: the nickname (`gator-gotcha:nickname`, refreshed from the server for
 returning players), best score, mute, and the Supabase session. On iOS a home-screen app has its
 own storage, separate from Safari, so the installed app starts as a new anonymous player until
 accounts can be linked (Facebook Login).

@@ -7,11 +7,9 @@ import {
   hasStoredSession,
   loadInstallDismissedAt,
   loadNickname,
-  loadSeed,
   markUpdatingFrom,
   saveInstallDismissedAt,
   saveNickname,
-  saveSeed,
   takeUpdatedFrom,
 } from './storage';
 
@@ -54,19 +52,6 @@ describe('nickname cache', () => {
   });
 });
 
-describe('seed memory', () => {
-  it('round-trips a seed, normalised', () => {
-    vi.stubGlobal('window', { localStorage: memoryStorage() });
-    saveSeed('ABC123');
-    expect(loadSeed()).toBe('abc123');
-  });
-
-  it('returns null for a corrupt stored seed', () => {
-    vi.stubGlobal('window', { localStorage: memoryStorage({ 'gator-gotcha:seed': '../etc' }) });
-    expect(loadSeed()).toBeNull();
-  });
-});
-
 describe('hasStoredSession', () => {
   it('detects a persisted supabase session', () => {
     vi.stubGlobal('window', {
@@ -84,9 +69,7 @@ describe('hasStoredSession', () => {
 describe('unavailable storage', () => {
   it('never throws', () => {
     vi.stubGlobal('window', throwing);
-    expect(() => saveSeed('abc123')).not.toThrow();
     expect(() => saveNickname('Duck1234')).not.toThrow();
-    expect(loadSeed()).toBeNull();
     expect(loadNickname()).toBeNull();
     expect(hasStoredSession()).toBe(false);
   });
