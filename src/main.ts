@@ -3,6 +3,7 @@ import '@fontsource/nunito/latin-600.css';
 import '@fontsource/nunito/latin-800.css';
 import './styles.css';
 import './modes.css';
+import { inject } from '@vercel/analytics';
 import { AudioEngine } from './audio/audio';
 import { Music } from './audio/music';
 import { playEvents, playNearMiss } from './audio/sfx';
@@ -503,6 +504,9 @@ function boot(): void {
   showTitle();
   createLoop(update, render).start();
 }
+
+// Initialize Vercel Web Analytics
+inject();
 
 try {
   boot();
